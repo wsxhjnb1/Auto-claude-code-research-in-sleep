@@ -43,7 +43,7 @@ claude
 
 ## ✨ 功能亮点
 
-- 📊 **17 个可组合 skill** — 自由混搭，或串联为完整流水线（`/idea-discovery`、`/auto-review-loop`、`/paper-writing`、`/research-pipeline`）
+- 📊 **18 个可组合 skill** — 自由混搭，或串联为完整流水线（`/idea-discovery`、`/auto-review-loop`、`/paper-writing`、`/research-pipeline`）
 - 🔍 **文献 & 查新** — 多源论文搜索（**[Zotero](#-zotero-集成可选)** + **[Obsidian](#-obsidian-集成可选)** + **本地 PDF** + arXiv/Scholar）+ 跨模型查新验证
 - 💡 **Idea 发现** — 文献调研 → 头脑风暴 8-12 个 idea → 查新 → GPU pilot 实验 → 排名报告
 - 🔄 **自动 review 循环** — 4 轮自主审稿，一夜从 5/10 提升到 7.5/10，自动跑 20+ 组 GPU 实验
@@ -53,6 +53,7 @@ claude
 - 🖥️ **GPU 部署** — 自动 rsync、screen 会话、多 GPU 并行实验、实时监控
 - 🔀 **灵活模型** — 默认 Claude × GPT-5.4，也支持 [GLM + GPT、GLM + MiniMax](#-替代模型组合)——无需 Claude API
 - 🛑 **Human-in-the-loop** — 关键决策点可配置检查点。`AUTO_PROCEED=true` 全自动，`false` 逐步审批
+- 📱 **[飞书通知](#-飞书lark-集成可选)** — 三种模式：关闭（默认）、仅推送（webhook，手机收通知）、双向交互（在飞书里审批/回复）。未配置时零影响
 
 ---
 
@@ -271,6 +272,7 @@ NARRATIVE_REPORT.md ──► /paper-plan ──► /paper-figure ──► /pap
 | 🔨 [`paper-compile`](skills/paper-compile/SKILL.md) | 编译 LaTeX 为 PDF，自动修复错误，投稿就绪检查 | 否 |
 | 🔄 [`auto-paper-improvement-loop`](skills/auto-paper-improvement-loop/SKILL.md) | 2 轮内容审稿 + 格式检查循环（4/10 → 8.5/10） | 是 |
 | 📝 [`paper-writing`](skills/paper-writing/SKILL.md) | **工作流 3 全流程**：paper-plan → paper-figure → paper-write → paper-compile → auto-paper-improvement-loop | 是 |
+| 📱 [`feishu-notify`](skills/feishu-notify/SKILL.md) | [飞书](#-飞书lark-集成可选)通知——推送（webhook）或双向交互。默认关闭 | 否 |
 
 ---
 
@@ -406,6 +408,86 @@ cp -r obsidian-skills/.claude /path/to/your/vault/
 **不用 Obsidian？** 没关系——`/research-lit` 自动跳过，照常工作。
 
 > 💡 **Zotero + Obsidian 同时使用**：很多研究者用 Zotero 存论文、Obsidian 记笔记。两个集成可以同时工作——`/research-lit` 先查 Zotero（原始论文 + 标注），再查 Obsidian（加工后笔记），再查本地 PDF，最后搜网络。
+
+### 📱 飞书/Lark 集成（可选）
+
+实验跑完、review 出分、checkpoint 等你审批——手机收飞书通知，不用守在终端前。
+
+**三种模式，按需选择：**
+
+| 模式 | 效果 | 你需要 |
+|------|------|--------|
+| **关闭**（默认） | 什么都不做，纯 CLI 不变 | 什么都不用 |
+| **仅推送** | 关键事件发 webhook 通知，手机收推送，不能回复 | 飞书机器人 webhook URL |
+| **双向交互** | 全双工：在飞书里审批/拒绝 idea、回复 checkpoint | [feishu-claude-code](https://github.com/joewongjc/feishu-claude-code) 运行中 |
+
+#### 仅推送模式（5 分钟配好）
+
+1. 在飞书群里添加自定义机器人：群设置 → 群机器人 → 添加机器人 → 自定义机器人 → 复制 webhook URL
+2. 创建配置文件：
+
+```bash
+cat > ~/.claude/feishu.json << 'EOF'
+{
+  "mode": "push",
+  "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/YOUR_WEBHOOK_ID"
+}
+EOF
+```
+
+搞定。之后 skill 会在关键事件（实验完成、review 出分、流水线结束）自动推送飞书通知。
+
+#### 双向交互模式（15 分钟）
+
+想在飞书里直接审批/回复（而非只收通知）：
+
+1. 先完成上面的推送模式配置
+2. 部署 [feishu-claude-code](https://github.com/joewongjc/feishu-claude-code)：
+
+```bash
+git clone https://github.com/joewongjc/feishu-claude-code.git
+cd feishu-claude-code
+pip install -r requirements.txt
+
+# 配置飞书应用凭证（详见仓库 README）
+cp .env.example .env
+# 编辑 .env，填入 App ID、App Secret 等
+
+# 运行桥接服务（可以和 Claude Code 一起丢服务器 screen 里常驻）
+screen -dmS feishu-bridge bash -c 'python main.py'
+```
+
+3. 更新配置为交互模式：
+
+```bash
+cat > ~/.claude/feishu.json << 'EOF'
+{
+  "mode": "interactive",
+  "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/YOUR_WEBHOOK_ID",
+  "interactive": {
+    "bridge_url": "http://localhost:5000",
+    "timeout_seconds": 300
+  }
+}
+EOF
+```
+
+现在每个 checkpoint 你都会在飞书收到消息，可以直接审批、拒绝或输入自定义指令。
+
+#### 哪些 skill 会发通知？
+
+| Skill | 事件 | 推送模式 | 交互模式 |
+|-------|------|----------|----------|
+| `/auto-review-loop` | 每轮出分、循环结束 | 分数 + 结论 | + 等你决定继续/停止 |
+| `/auto-paper-improvement-loop` | 每轮出分、全部完成 | 分数进展表 | 分数进展表 |
+| `/run-experiment` | 实验已部署 | GPU 分配 + 预计时间 | GPU 分配 + 预计时间 |
+| `/monitor-experiment` | 结果已收集 | 结果对比表 | 结果对比表 |
+| `/idea-discovery` | 阶段切换、最终报告 | 各阶段摘要 | + 审批/拒绝 |
+| `/research-pipeline` | 阶段切换、流水线结束 | 阶段摘要 | + 审批/拒绝 |
+
+**不用飞书？** 没关系——没有 `~/.claude/feishu.json` 文件时，所有 skill 行为完全不变。零开销，零副作用。
+
+> 💡 **其他 IM 平台**：推送模式的 webhook 模式适用于任何支持 incoming webhook 的服务（Slack、Discord、钉钉、企业微信）。只需改 `webhook_url` 和卡片格式。双向交互可参考 [cc-connect](https://github.com/chenhg5/cc-connect)（多平台桥接）或 [clawdbot-feishu](https://github.com/m1heng/clawdbot-feishu)。
 
 ## 🎛️ 自定义
 
@@ -582,11 +664,7 @@ claude
 
 ### 计划中
 
-- [ ] **飞书集成** — 三种模式，可按 skill 配置：
-  - **关闭**（默认）— 不接飞书，纯 CLI 不变
-  - **仅推送** — 关键节点（实验完成、review 出分、checkpoint 等待）发飞书 webhook 通知。无需额外进程，skill 里 `curl` 一下就行。手机收推送，不能回复
-  - **双向交互** — 通过 [feishu-claude-code](https://github.com/joewongjc/feishu-claude-code) 全双工桥接。在飞书里审批/拒绝 idea、回复 checkpoint。需要 `python main.py` 和 Claude Code 同时运行（可都丢服务器 `screen` 里常驻）
-  - 相关项目：[clawdbot-feishu](https://github.com/m1heng/clawdbot-feishu)（3.7k⭐）、[cc-connect](https://github.com/chenhg5/cc-connect)（多平台桥接）、[lark-openapi-mcp](https://github.com/larksuite/lark-openapi-mcp)（官方，424⭐）
+- [x] **飞书集成** — 三种模式（关闭/推送/交互），通过 `~/.claude/feishu.json` 配置。推送只需 webhook URL；交互用 [feishu-claude-code](https://github.com/joewongjc/feishu-claude-code)。默认关闭——对已有工作流零影响。见[设置指南](#-飞书lark-集成可选)
 - [ ] **W&B 集成** — 从 Weights & Biases 拉取训练曲线和指标作为反馈信号。auto-review-loop 可读取 loss/accuracy 图诊断训练问题并建议下一步实验
   - 相关项目：[wandb-mcp-server](https://github.com/wandb/mcp-server)（W&B 官方 MCP，如有）或通过 `wandb api` CLI
 - [x] **Zotero MCP 集成** — `/research-lit` 搜索 Zotero 文献库、读取标注/高亮、导出 BibTeX。推荐：[zotero-mcp](https://github.com/54yyyu/zotero-mcp)（1.8k⭐）。见[设置指南](#-zotero-集成可选)
@@ -626,7 +704,7 @@ claude
 - [Research-Paper-Writing-Skills](https://github.com/Master-cai/Research-Paper-Writing-Skills) — 论文写作 skill 模板
 - [baoyu-skills](https://github.com/jimliu/baoyu-skills) — Claude Code skills 合集
 
-**飞书集成（计划中）**
+**飞书集成**（[安装指南](#-飞书lark-集成可选)）
 - [feishu-claude-code](https://github.com/joewongjc/feishu-claude-code) — 飞书 ↔ Claude Code 双向桥接
 - [clawdbot-feishu](https://github.com/m1heng/clawdbot-feishu) — 飞书 Claude 机器人
 - [cc-connect](https://github.com/chenhg5/cc-connect) — 多平台消息桥接

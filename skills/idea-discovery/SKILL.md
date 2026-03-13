@@ -47,7 +47,7 @@ Invoke `/research-lit` to map the research landscape:
 - Identify structural gaps and recurring limitations
 - Output a literature summary (saved to working notes)
 
-**🚦 Checkpoint:** Present the landscape summary to the user. Ask:
+**🚦 Checkpoint** (+ Feishu if configured — interactive mode sends checkpoint to Feishu, waits for reply; push mode sends summary; off/absent skips)**:** Present the landscape summary to the user. Ask:
 
 ```
 📚 Literature survey complete. Here's what I found:
@@ -76,7 +76,7 @@ Invoke `/idea-creator` with the landscape context:
 - Rank by empirical signal
 - Output `IDEA_REPORT.md`
 
-**🚦 Checkpoint:** Present `IDEA_REPORT.md` ranked ideas to the user. Ask:
+**🚦 Checkpoint** (+ Feishu if configured)**:** Present `IDEA_REPORT.md` ranked ideas to the user. Ask:
 
 ```
 💡 Generated X ideas, filtered to Y, piloted Z. Top results:
@@ -172,6 +172,7 @@ Finalize `IDEA_REPORT.md` with all accumulated information:
 - **Empirical signal > theoretical appeal.** An idea with a positive pilot outranks a "sounds great" idea without evidence.
 - **Document everything.** Dead ends are just as valuable as successes for future reference.
 - **Be honest with the reviewer.** Include negative results and failed pilots in the review prompt.
+- **Feishu notifications are optional.** If `~/.claude/feishu.json` exists, send `checkpoint` at each phase transition and `pipeline_done` at final report. If absent/off, skip silently.
 
 ## Composing with Workflow 2
 

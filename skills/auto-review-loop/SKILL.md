@@ -96,6 +96,13 @@ Then extract structured fields:
 
 **STOP CONDITION**: If score >= 6 AND verdict contains "ready" or "almost" → stop loop, document final state.
 
+#### Feishu Notification (if configured)
+
+After parsing the score, check if `~/.claude/feishu.json` exists and mode is not `"off"`:
+- Send a `review_scored` notification: "Round N: X/10 — [verdict]" with top 3 weaknesses
+- If **interactive** mode and verdict is "almost": send as checkpoint, wait for user reply on whether to continue or stop
+- If config absent or mode off: skip entirely (no-op)
+
 #### Phase C: Implement Fixes (if not stopping)
 
 For each action item (highest priority first):
@@ -164,6 +171,7 @@ When loop ends (positive assessment or max rounds):
    - List remaining blockers
    - Estimate effort needed for each
    - Suggest whether to continue manually or pivot
+5. **Feishu notification** (if configured): Send `pipeline_done` with final score progression table
 
 ## Key Rules
 

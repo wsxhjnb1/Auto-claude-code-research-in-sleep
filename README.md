@@ -43,7 +43,7 @@ See [full setup guide](#%EF%B8%8F-setup) for details and [alternative model comb
 
 ## ✨ Features
 
-- 📊 **17 composable skills** — mix and match, or chain into full pipelines (`/idea-discovery`, `/auto-review-loop`, `/paper-writing`, `/research-pipeline`)
+- 📊 **18 composable skills** — mix and match, or chain into full pipelines (`/idea-discovery`, `/auto-review-loop`, `/paper-writing`, `/research-pipeline`)
 - 🔍 **Literature & novelty** — multi-source paper search (**[Zotero](#-zotero-integration-optional)** + **[Obsidian](#-obsidian-integration-optional)** + **local PDFs** + arXiv/Scholar) + cross-model novelty verification
 - 💡 **Idea discovery** — literature survey → brainstorm 8-12 ideas → novelty check → GPU pilot experiments → ranked report
 - 🔄 **Auto review loop** — 4-round autonomous review, 5/10 → 7.5/10 overnight with 20+ GPU experiments
@@ -53,6 +53,7 @@ See [full setup guide](#%EF%B8%8F-setup) for details and [alternative model comb
 - 🖥️ **GPU deployment** — auto rsync, screen sessions, multi-GPU parallel experiments, live monitoring
 - 🔀 **Flexible models** — default Claude × GPT-5.4, also supports [GLM + GPT, GLM + MiniMax](#-alternative-model-combinations) — no Claude API required
 - 🛑 **Human-in-the-loop** — configurable checkpoints at key decisions. `AUTO_PROCEED=true` for full autopilot, `false` to approve each step
+- 📱 **[Feishu/Lark notifications](#-feishulark-integration-optional)** — three modes: off (default), push-only (webhook, mobile alerts), interactive (approve/reject from Feishu). Zero impact when unconfigured
 
 ---
 
@@ -328,6 +329,7 @@ After Workflow 3 generates the paper, `/auto-paper-improvement-loop` runs 2 roun
 | 🔨 [`paper-compile`](skills/paper-compile/SKILL.md) | Compile LaTeX to PDF, auto-fix errors, submission readiness checks | No |
 | 🔄 [`auto-paper-improvement-loop`](skills/auto-paper-improvement-loop/SKILL.md) | 2-round content review + format check loop on generated paper (4/10 → 8.5/10) | Yes |
 | 📝 [`paper-writing`](skills/paper-writing/SKILL.md) | **Workflow 3 pipeline**: paper-plan → paper-figure → paper-write → paper-compile → auto-paper-improvement-loop | Yes |
+| 📱 [`feishu-notify`](skills/feishu-notify/SKILL.md) | [Feishu/Lark](#-feishulark-integration-optional) notifications — push (webhook) or interactive (bidirectional). Off by default | No |
 
 ---
 
@@ -490,6 +492,86 @@ cp -r obsidian-skills/.claude /path/to/your/vault/
 **Not using Obsidian?** No problem — `/research-lit` automatically skips Obsidian and works as before.
 
 > 💡 **Zotero + Obsidian together**: Many researchers use Zotero for paper storage and Obsidian for notes. Both integrations work simultaneously — `/research-lit` checks Zotero first (raw papers + annotations), then Obsidian (your processed notes), then local PDFs, then web search.
+
+### 📱 Feishu/Lark Integration (Optional)
+
+Get mobile notifications when experiments finish, reviews score, or checkpoints need your input — without sitting in front of the terminal.
+
+**Three modes — you choose per-project:**
+
+| Mode | What happens | You need |
+|------|-------------|----------|
+| **Off** (default) | Nothing. Pure CLI, no Feishu | Nothing |
+| **Push only** | Webhook notifications at key events. Mobile push, no reply | Feishu bot webhook URL |
+| **Interactive** | Full bidirectional. Approve/reject ideas, reply to checkpoints from Feishu | [feishu-claude-code](https://github.com/joewongjc/feishu-claude-code) running |
+
+#### Push Only Setup (5 min)
+
+1. Create a Feishu bot in your group chat: Group Settings → Bots → Add Bot → Custom Bot → copy webhook URL
+2. Create config:
+
+```bash
+cat > ~/.claude/feishu.json << 'EOF'
+{
+  "mode": "push",
+  "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/YOUR_WEBHOOK_ID"
+}
+EOF
+```
+
+That's it. Skills will now send you push notifications at key events (experiment done, review scored, pipeline complete).
+
+#### Interactive Setup (15 min)
+
+For bidirectional communication (approve/reject from Feishu):
+
+1. Complete push setup above first
+2. Set up [feishu-claude-code](https://github.com/joewongjc/feishu-claude-code):
+
+```bash
+git clone https://github.com/joewongjc/feishu-claude-code.git
+cd feishu-claude-code
+pip install -r requirements.txt
+
+# Configure Feishu app credentials (see repo README)
+cp .env.example .env
+# Edit .env with your App ID, App Secret, etc.
+
+# Run the bridge (can run on the same server as Claude Code via screen)
+screen -dmS feishu-bridge bash -c 'python main.py'
+```
+
+3. Update config to interactive mode:
+
+```bash
+cat > ~/.claude/feishu.json << 'EOF'
+{
+  "mode": "interactive",
+  "webhook_url": "https://open.feishu.cn/open-apis/bot/v2/hook/YOUR_WEBHOOK_ID",
+  "interactive": {
+    "bridge_url": "http://localhost:5000",
+    "timeout_seconds": 300
+  }
+}
+EOF
+```
+
+Now at every checkpoint, you'll get a Feishu message with options to approve, reject, or reply with custom instructions.
+
+#### Which skills send notifications?
+
+| Skill | Events | Push | Interactive |
+|-------|--------|------|-------------|
+| `/auto-review-loop` | Review scored (each round), loop complete | Score + verdict | + wait for continue/stop |
+| `/auto-paper-improvement-loop` | Review scored, all rounds done | Score progression | Score progression |
+| `/run-experiment` | Experiments deployed | GPU assignment + ETA | GPU assignment + ETA |
+| `/monitor-experiment` | Results collected | Results table | Results table |
+| `/idea-discovery` | Phase transitions, final report | Summary at each phase | + approve/reject at checkpoints |
+| `/research-pipeline` | Stage transitions, pipeline done | Stage summary | + approve/reject |
+
+**Not using Feishu?** No problem — without `~/.claude/feishu.json`, all skills behave exactly as before. Zero overhead, zero side effects.
+
+> 💡 **Alternative IM platforms**: The push-only webhook pattern works with any service that accepts incoming webhooks (Slack, Discord, DingTalk, WeChat Work). Just change the `webhook_url` and card format in `feishu-notify/SKILL.md`. For bidirectional support, see [cc-connect](https://github.com/chenhg5/cc-connect) (multi-platform bridge) or [clawdbot-feishu](https://github.com/m1heng/clawdbot-feishu).
 
 ## 🎛️ Customization
 
@@ -666,11 +748,7 @@ This lets GLM (acting as Claude Code) familiarize itself with the skill files an
 
 ### Planned
 
-- [ ] **Feishu/Lark integration** — three modes, configurable per skill:
-  - **Off** (default) — no Feishu, pure CLI as-is
-  - **Push only** — lightweight webhook notifications at key events (experiment done, review scored, checkpoint waiting). No extra process needed, just `curl` from within skills. Mobile push, no reply
-  - **Interactive** — full bidirectional via [feishu-claude-code](https://github.com/joewongjc/feishu-claude-code). Approve/reject ideas, reply to checkpoints from Feishu. Requires `python main.py` running alongside Claude Code (both can run on a remote server via `screen`)
-  - Related projects: [clawdbot-feishu](https://github.com/m1heng/clawdbot-feishu) (3.7k⭐), [cc-connect](https://github.com/chenhg5/cc-connect) (multi-platform bridge), [lark-openapi-mcp](https://github.com/larksuite/lark-openapi-mcp) (official, 424⭐)
+- [x] **Feishu/Lark integration** — three modes (off/push/interactive), configurable via `~/.claude/feishu.json`. Push-only needs just a webhook URL; interactive uses [feishu-claude-code](https://github.com/joewongjc/feishu-claude-code). Off by default — zero impact on existing workflows. See [setup guide](#-feishulark-integration-optional)
 - [ ] **W&B integration** — pull training curves and metrics from Weights & Biases as feedback signal. Auto-review-loop can read loss/accuracy plots to diagnose training issues and suggest next experiments
   - Related projects: [wandb-mcp-server](https://github.com/wandb/mcp-server) (official W&B MCP, if available), or via `wandb api` CLI
 - [x] **Zotero MCP integration** — `/research-lit` searches Zotero collections, reads annotations/highlights, exports BibTeX. Recommended: [zotero-mcp](https://github.com/54yyyu/zotero-mcp) (1.8k⭐). See [setup guide](#-zotero-integration-optional)
@@ -710,7 +788,7 @@ This project builds on and integrates with many excellent open-source projects:
 - [Research-Paper-Writing-Skills](https://github.com/Master-cai/Research-Paper-Writing-Skills) — Paper writing skill templates
 - [baoyu-skills](https://github.com/jimliu/baoyu-skills) — Claude Code skills collection
 
-**Feishu/Lark (Planned)**
+**Feishu/Lark Integration** ([setup guide](#-feishulark-integration-optional))
 - [feishu-claude-code](https://github.com/joewongjc/feishu-claude-code) — Bidirectional Feishu ↔ Claude Code bridge
 - [clawdbot-feishu](https://github.com/m1heng/clawdbot-feishu) — Feishu bot for Claude
 - [cc-connect](https://github.com/chenhg5/cc-connect) — Multi-platform messaging bridge
