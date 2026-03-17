@@ -165,9 +165,9 @@ These skills compose into a full research lifecycle. The three workflows can be 
 ### Full Pipeline 🚀
 
 ```
-/research-lit → /idea-creator → /novelty-check → /research-refine → /run-experiment → /auto-review-loop → /paper-plan → /paper-figure → /paper-write → /auto-paper-improvement-loop → submit
-  (survey)      (brainstorm)    (verify novel)   (refine method)   (deploy & run)    (review & fix)      (outline)     (plots)        (LaTeX+PDF)     (review ×2 + format)     (done!)
-  ├────────────── Workflow 1: Idea Discovery + Refinement ──────────────┤  ├── Workflow 2 ──┤   ├──────────────── Workflow 3: Paper Writing ──────────────────┤
+/research-lit → /idea-creator → /novelty-check → /research-refine → /experiment-bridge → /auto-review-loop → /paper-plan → /paper-figure → /paper-write → /auto-paper-improvement-loop → submit
+  (survey)      (brainstorm)    (verify novel)   (refine method)   (implement+deploy)  (review & fix)      (outline)     (plots)        (LaTeX+PDF)     (review ×2 + format)     (done!)
+  ├────────────── Workflow 1: Idea Discovery ──────────────┤ ├── 1.5: Bridge ──┤ ├── Workflow 2 ──┤   ├──────────────── Workflow 3: Paper Writing ──────────────────┤
 ```
 
 📝 **Blog post:** [梦中科研全流程开源](http://xhslink.com/o/2iV33fYoc7Q)
@@ -437,6 +437,14 @@ After Workflow 3 generates the paper, `/auto-paper-improvement-loop` runs 2 roun
 | └ 🧭 **[`research-refine-pipeline`](skills/research-refine-pipeline/SKILL.md)** | Refine method + plan experiments in one chain | Yes |
 | 　├ 🔬 [`research-refine`](skills/research-refine/SKILL.md) | Problem anchor → iterative method refinement (up to 5 rounds, score ≥ 9) | Yes |
 | 　└ 🧪 [`experiment-plan`](skills/experiment-plan/SKILL.md) | Claim-driven experiment roadmap with ablations, budgets, and run order | No |
+
+### 🔗 Workflow 1.5: Experiment Bridge
+
+| Skill | Description | Codex MCP? |
+|-------|-------------|:---:|
+| 🔗 **[`experiment-bridge`](skills/experiment-bridge/SKILL.md)** | Read experiment plan → implement code → sanity check → deploy to GPU → collect initial results | No |
+| ├ 🚀 [`run-experiment`](skills/run-experiment/SKILL.md) | Deploy experiments to local (MPS/CUDA) or remote GPU servers | No |
+| └ 👀 [`monitor-experiment`](skills/monitor-experiment/SKILL.md) | Monitor running experiments, check progress, collect results | No |
 
 ### 🔁 Workflow 2: Auto Research Loop
 

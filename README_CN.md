@@ -165,9 +165,9 @@ claude
 ### 完整流程 🚀
 
 ```
-/research-lit → /idea-creator → /novelty-check → /research-refine → /run-experiment → /auto-review-loop → /paper-plan → /paper-figure → /paper-write → /auto-paper-improvement-loop → 投稿
-  (调研文献)      (找idea)       (查新验证)      (打磨方案)      (部署跑实验)     (自动改到能投)      (大纲)        (作图)        (LaTeX+PDF)     (审稿×2 + 格式检查)     (搞定!)
-  ├────────────── 工作流 1：找 Idea + 方案精炼 ──────────────┤  ├── 工作流 2 ──┤   ├───────────────── 工作流 3：论文写作 ─────────────────────┤
+/research-lit → /idea-creator → /novelty-check → /research-refine → /experiment-bridge → /auto-review-loop → /paper-plan → /paper-figure → /paper-write → /auto-paper-improvement-loop → 投稿
+  (调研文献)      (找idea)       (查新验证)      (打磨方案)      (实现+部署)       (自动改到能投)      (大纲)        (作图)        (LaTeX+PDF)     (审稿×2 + 格式检查)     (搞定!)
+  ├────────────── 工作流 1：找 Idea + 方案精炼 ──────────────┤ ├── 1.5: 桥接 ──┤ ├── 工作流 2 ──┤   ├───────────────── 工作流 3：论文写作 ─────────────────────┤
 ```
 
 📝 **博客：** [梦中科研全流程开源](http://xhslink.com/o/2iV33fYoc7Q)
@@ -363,6 +363,14 @@ NARRATIVE_REPORT.md ──► /paper-plan ──► /paper-figure ──► /pap
 | └ 🧭 **[`research-refine-pipeline`](skills/research-refine-pipeline/SKILL.md)** | 方法精炼 + 实验规划一条龙 | 是 |
 | 　├ 🔬 [`research-refine`](skills/research-refine/SKILL.md) | 冻结问题锚点 → 迭代精炼方法（最多 5 轮，≥9 分停） | 是 |
 | 　└ 🧪 [`experiment-plan`](skills/experiment-plan/SKILL.md) | Claim-driven 实验路线图，含 ablation、预算和执行顺序 | 否 |
+
+### 🔗 工作流 1.5：实验桥接
+
+| Skill | 功能 | Codex MCP？ |
+|-------|------|:---:|
+| 🔗 **[`experiment-bridge`](skills/experiment-bridge/SKILL.md)** | 读取实验计划 → 实现代码 → sanity check → 部署到 GPU → 收集初始结果 | 否 |
+| ├ 🚀 [`run-experiment`](skills/run-experiment/SKILL.md) | 部署实验到本地（MPS/CUDA）或远程 GPU 服务器 | 否 |
+| └ 👀 [`monitor-experiment`](skills/monitor-experiment/SKILL.md) | 监控实验进度、收集结果 | 否 |
 
 ### 🔁 工作流 2：自动科研循环
 
