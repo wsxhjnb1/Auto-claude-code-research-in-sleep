@@ -29,47 +29,47 @@ Parse the input: **$ARGUMENTS**
 
 1. Analyze user description to determine the most suitable diagram type
 2. Read the corresponding syntax reference documentation (see Diagram Type Reference below)
-3. **If the diagram involves mathematical notation** (formulas, equations, Greek letters, subscripts, superscripts, fractions, matrices, etc.), also read [config-math.md](references/config-math.md) and apply the math syntax rules from the **Math Formulas in Diagrams** section below
+3. **If the diagram involves mathematical notation** (formulas, equations, Greek letters, subscripts, superscripts, fractions, matrices, etc.), apply the math syntax rules from the **Math Formulas in Diagrams** section below
 4. Identify all components, connections, and data flow
 5. Plan the diagram structure
 
 ### Step 2: Read Documentation
 
-Select the appropriate diagram type and **read the corresponding reference file** before generating code:
+Select the appropriate diagram type based on the use case. Use your built-in knowledge of Mermaid syntax, or fetch up-to-date docs via the context7 MCP server if needed.
 
-| Type | Documentation | Use Cases |
-| ---- | ------------- | --------- |
-| Flowchart | [flowchart.md](references/flowchart.md) | Processes, decisions, steps |
-| Sequence Diagram | [sequenceDiagram.md](references/sequenceDiagram.md) | Interactions, messaging, API calls |
-| Class Diagram | [classDiagram.md](references/classDiagram.md) | Class structure, inheritance, associations |
-| State Diagram | [stateDiagram.md](references/stateDiagram.md) | State machines, state transitions |
-| ER Diagram | [entityRelationshipDiagram.md](references/entityRelationshipDiagram.md) | Database design, entity relationships |
-| Gantt Chart | [gantt.md](references/gantt.md) | Project planning, timelines |
-| Pie Chart | [pie.md](references/pie.md) | Proportions, distributions |
-| Mindmap | [mindmap.md](references/mindmap.md) | Hierarchical structures, knowledge graphs |
-| Timeline | [timeline.md](references/timeline.md) | Historical events, milestones |
-| Git Graph | [gitgraph.md](references/gitgraph.md) | Branches, merges, versions |
-| Quadrant Chart | [quadrantChart.md](references/quadrantChart.md) | Four-quadrant analysis |
-| Requirement Diagram | [requirementDiagram.md](references/requirementDiagram.md) | Requirements traceability |
-| C4 Diagram | [c4.md](references/c4.md) | System architecture (C4 model) |
-| Sankey Diagram | [sankey.md](references/sankey.md) | Flow, conversions |
-| XY Chart | [xyChart.md](references/xyChart.md) | Line charts, bar charts |
-| Block Diagram | [block.md](references/block.md) | System components, modules |
-| Packet Diagram | [packet.md](references/packet.md) | Network protocols, data structures |
-| Kanban | [kanban.md](references/kanban.md) | Task management, workflows |
-| Architecture Diagram | [architecture.md](references/architecture.md) | System architecture |
-| Radar Chart | [radar.md](references/radar.md) | Multi-dimensional comparison |
-| Treemap | [treemap.md](references/treemap.md) | Hierarchical data visualization |
-| User Journey | [userJourney.md](references/userJourney.md) | User experience flows |
-| ZenUML | [zenuml.md](references/zenuml.md) | Sequence diagrams (code style) |
+| Type | Use Cases |
+| ---- | --------- |
+| Flowchart | Processes, decisions, steps |
+| Sequence Diagram | Interactions, messaging, API calls |
+| Class Diagram | Class structure, inheritance, associations |
+| State Diagram | State machines, state transitions |
+| ER Diagram | Database design, entity relationships |
+| Gantt Chart | Project planning, timelines |
+| Pie Chart | Proportions, distributions |
+| Mindmap | Hierarchical structures, knowledge graphs |
+| Timeline | Historical events, milestones |
+| Git Graph | Branches, merges, versions |
+| Quadrant Chart | Four-quadrant analysis |
+| Requirement Diagram | Requirements traceability |
+| C4 Diagram | System architecture (C4 model) |
+| Sankey Diagram | Flow, conversions |
+| XY Chart | Line charts, bar charts |
+| Block Diagram | System components, modules |
+| Packet Diagram | Network protocols, data structures |
+| Kanban | Task management, workflows |
+| Architecture Diagram | System architecture |
+| Radar Chart | Multi-dimensional comparison |
+| Treemap | Hierarchical data visualization |
+| User Journey | User experience flows |
+| ZenUML | Sequence diagrams (code style) |
 
 ### Configuration & Themes
 
-- [Theming](references/config-theming.md) - Custom colors and styles
-- [Directives](references/config-directives.md) - Diagram-level configuration
-- [Layouts](references/config-layouts.md) - Layout direction and spacing
-- [Configuration](references/config-configuration.md) - Global settings
-- [Math](references/config-math.md) - LaTeX math support
+- **Theming** - Custom colors and styles
+- **Directives** - Diagram-level configuration
+- **Layouts** - Layout direction and spacing
+- **Configuration** - Global settings
+- **Math** - LaTeX math support (see Math Formulas in Diagrams section below)
 
 ### Step 3: Generate Mermaid Code & Save Files
 
