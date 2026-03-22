@@ -154,7 +154,7 @@ def handle_tools_list(request_id: Any) -> dict[str, Any]:
             "tools": [
                 {
                     "name": "status",
-                    "description": "Check Playwright availability, dedicated profile presence, and Gemini login readiness.",
+                    "description": "Check Gemini browser readiness, auto-open interactive login or human-verification recovery when needed, enforce strict single-window cleanup on the dedicated profile, then close the visible window again once the profile is ready.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {},
@@ -162,7 +162,7 @@ def handle_tools_list(request_id: Any) -> dict[str, Any]:
                 },
                 {
                     "name": "login",
-                    "description": "Open a headed dedicated Gemini profile so the user can log in once and persist the session.",
+                    "description": "Explicitly trigger the shared Gemini recovery flow: open or reuse the interactive window, collapse extra dedicated-profile windows down to one, wait for login or human verification, then close the visible window again after readiness.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -176,7 +176,7 @@ def handle_tools_list(request_id: Any) -> dict[str, Any]:
                 },
                 {
                     "name": "render_image",
-                    "description": "Use the Gemini web app to generate one image from a prompt and save it to disk.",
+                    "description": "Use the Gemini web app to generate one image from a prompt, preferring Thinking/Pro mode before Fast/Flash, while automatically pruning extra dedicated-profile windows and continuing in the background after login or human verification.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -196,6 +196,11 @@ def handle_tools_list(request_id: Any) -> dict[str, Any]:
                                 "type": "integer",
                                 "minimum": 30,
                                 "description": "Maximum time to wait for generation and download.",
+                            },
+                            "loginTimeoutSec": {
+                                "type": "integer",
+                                "minimum": 30,
+                                "description": "Maximum time to wait for automatic interactive Gemini login or human verification before returning needs_login or needs_human_verification.",
                             },
                         },
                         "required": ["prompt", "outputPath"],
@@ -245,6 +250,7 @@ def handle_tool_call(request_id: Any, params: dict[str, Any]) -> dict[str, Any]:
                 output_path=resolve_output_path(output_path),
                 aspect_ratio=str(arguments.get("aspectRatio", "16:9")),
                 timeout_sec=arguments.get("timeoutSec"),
+                login_timeout_sec=arguments.get("loginTimeoutSec"),
             ).to_dict()
             result["profile_dir"] = str(backend.config.browser_profile_dir)
             return {"jsonrpc": "2.0", "id": request_id, "result": tool_result_text(result)}

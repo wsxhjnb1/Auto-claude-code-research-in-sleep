@@ -168,7 +168,12 @@ def main() -> int:
             dry_run=args.dry_run,
         )
         manifest_entries.append(entry)
-        if entry["status"] in {"manual_blocker", "backend_blocker"}:
+        if entry["status"] in {
+            "manual_blocker",
+            "backend_blocker",
+            "needs_login",
+            "needs_human_verification",
+        }:
             blocked = True
 
     _write_manifest(Path(args.manifest), manifest_entries, backend=config.normalized_backend)
@@ -282,9 +287,16 @@ def _build_manifest_entry(
                 selector_report=render_result.selector_report,
                 review_score=None,
             )
+        manifest_status = render_result.status
+        if manifest_status not in {
+            "needs_login",
+            "needs_human_verification",
+            "backend_blocker",
+        }:
+            manifest_status = "backend_blocker"
         return dict(
             base_entry,
-            status="backend_blocker",
+            status=manifest_status,
             notes=render_result.message,
             debug_bundle_path=render_result.debug_bundle_path,
             selector_report=render_result.selector_report,

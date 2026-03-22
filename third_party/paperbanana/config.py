@@ -73,8 +73,68 @@ class IllustrationConfig:
             os.getenv("GEMINI_BROWSER_HEADLESS", "false")
         )
     )
+    browser_auto_interactive: bool = field(
+        default_factory=lambda: _parse_bool(
+            os.getenv("GEMINI_BROWSER_AUTO_INTERACTIVE", "true")
+        )
+    )
+    browser_auto_interactive_wait_sec: int = field(
+        default_factory=lambda: int(
+            os.getenv("GEMINI_BROWSER_AUTO_INTERACTIVE_WAIT_SEC", "300")
+        )
+    )
+    browser_auto_wait_for_human_verification: bool = field(
+        default_factory=lambda: _parse_bool(
+            os.getenv("GEMINI_BROWSER_AUTO_WAIT_FOR_HUMAN_VERIFICATION", "true")
+        )
+    )
+    browser_auto_update: bool = field(
+        default_factory=lambda: _parse_bool(
+            os.getenv("GEMINI_BROWSER_AUTO_UPDATE", "true")
+        )
+    )
+    browser_update_scope: str = field(
+        default_factory=lambda: os.getenv(
+            "GEMINI_BROWSER_UPDATE_SCOPE",
+            "playwright_chromium",
+        )
+    )
+    browser_close_interactive_after_ready: bool = field(
+        default_factory=lambda: _parse_bool(
+            os.getenv("GEMINI_BROWSER_CLOSE_INTERACTIVE_AFTER_READY", "true")
+        )
+    )
+    browser_render_session_mode: str = field(
+        default_factory=lambda: os.getenv(
+            "GEMINI_BROWSER_RENDER_SESSION_MODE",
+            "temporary",
+        )
+    )
+    browser_retry_on_context_leak: bool = field(
+        default_factory=lambda: _parse_bool(
+            os.getenv("GEMINI_BROWSER_RENDER_RETRY_ON_CONTEXT_LEAK", "true")
+        )
+    )
+    browser_render_max_retries: int = field(
+        default_factory=lambda: int(
+            os.getenv("GEMINI_BROWSER_RENDER_MAX_RETRIES", "2")
+        )
+    )
     browser_timeout_sec: int = field(
         default_factory=lambda: int(os.getenv("GEMINI_BROWSER_TIMEOUT_SEC", "240"))
+    )
+    browser_prune_extra_pages: bool = field(
+        default_factory=lambda: _parse_bool(
+            os.getenv("GEMINI_BROWSER_PRUNE_EXTRA_PAGES", "true")
+        )
+    )
+    browser_max_interactive_pages: int = field(
+        default_factory=lambda: int(
+            os.getenv("GEMINI_BROWSER_MAX_INTERACTIVE_PAGES", "1")
+        )
+    )
+    browser_remote_debug_port: int = field(
+        default_factory=lambda: int(os.getenv("GEMINI_BROWSER_REMOTE_DEBUG_PORT", "9223"))
     )
     browser_app_url: str = field(
         default_factory=lambda: os.getenv(
@@ -82,10 +142,23 @@ class IllustrationConfig:
             "https://gemini.google.com/app",
         )
     )
+    browser_executable_path: Path | None = field(
+        default_factory=lambda: Path(raw).expanduser()
+        if (raw := os.getenv("GEMINI_BROWSER_EXECUTABLE_PATH", "").strip())
+        else None
+    )
     browser_channel: str = field(
         default_factory=lambda: os.getenv("GEMINI_BROWSER_CHANNEL", "")
     )
+    browser_mode_policy: str = field(
+        default_factory=lambda: os.getenv(
+            "GEMINI_BROWSER_MODE_POLICY",
+            "prefer_thinking_fallback_fast",
+        )
+    )
     browser_debug_dir: Path | None = None
+    browser_session_state_path: Path | None = None
+    browser_launch_log_path: Path | None = None
 
     def __post_init__(self) -> None:
         self.work_dir = Path(self.work_dir)
@@ -93,12 +166,23 @@ class IllustrationConfig:
         if self.reference_dir is not None:
             self.reference_dir = Path(self.reference_dir)
         self.browser_profile_dir = Path(self.browser_profile_dir)
+        if self.browser_executable_path is not None:
+            self.browser_executable_path = Path(self.browser_executable_path)
         if self.browser_debug_dir is None:
             self.browser_debug_dir = (
                 self.work_dir / "refine-logs" / "gemini-browser-debug"
             )
         else:
             self.browser_debug_dir = Path(self.browser_debug_dir)
+        state_dir = self.browser_profile_dir.parent
+        if self.browser_session_state_path is None:
+            self.browser_session_state_path = state_dir / "session.json"
+        else:
+            self.browser_session_state_path = Path(self.browser_session_state_path)
+        if self.browser_launch_log_path is None:
+            self.browser_launch_log_path = state_dir / "interactive-browser.log"
+        else:
+            self.browser_launch_log_path = Path(self.browser_launch_log_path)
 
     def resolve_api_key(self) -> str:
         candidates = [
@@ -128,6 +212,27 @@ class IllustrationConfig:
     @property
     def uses_api_backend(self) -> bool:
         return self.normalized_backend == "api"
+
+    @property
+    def normalized_render_session_mode(self) -> str:
+        mode = (self.browser_render_session_mode or "temporary").strip().lower()
+        return mode if mode in {"temporary", "new_chat", "reuse"} else "temporary"
+
+    @property
+    def normalized_browser_update_scope(self) -> str:
+        scope = (self.browser_update_scope or "playwright_chromium").strip().lower()
+        return scope if scope == "playwright_chromium" else "playwright_chromium"
+
+    @property
+    def normalized_browser_mode_policy(self) -> str:
+        policy = (self.browser_mode_policy or "").strip().lower()
+        if policy == "prefer_fast":
+            return "prefer_fast"
+        return "prefer_thinking_fallback_fast"
+
+    @property
+    def normalized_browser_max_interactive_pages(self) -> int:
+        return max(int(self.browser_max_interactive_pages or 1), 1)
 
 
 def _parse_bool(raw: str) -> bool:

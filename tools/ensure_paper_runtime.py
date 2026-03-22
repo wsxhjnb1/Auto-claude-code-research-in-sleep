@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -67,6 +68,12 @@ AUTO_INSTALL_ENV = "PAPER_AUTO_INSTALL"
 VENV_DIR_ENV = "PAPER_VENV_DIR"
 SYSTEM_INSTALL_ENV = "PAPER_SYSTEM_INSTALL"
 ACTIVE_ENV = "ARIS_PAPER_RUNTIME_ACTIVE"
+BROWSER_AUTO_UPDATE_ENV = "GEMINI_BROWSER_AUTO_UPDATE"
+BROWSER_UPDATE_SCOPE_ENV = "GEMINI_BROWSER_UPDATE_SCOPE"
+BROWSER_EXECUTABLE_ENV = "GEMINI_BROWSER_EXECUTABLE_PATH"
+
+PLAYWRIGHT_REQUIRED_REVISION_RE = re.compile(r"playwright chromium v(\d+)", re.IGNORECASE)
+PLAYWRIGHT_CHROMIUM_DIR_RE = re.compile(r"chromium-(\d+)", re.IGNORECASE)
 
 
 def parse_args() -> argparse.Namespace:
@@ -151,6 +158,9 @@ def ensure_runtime(phase: str, *, work_dir: Path | None = None) -> dict[str, Any
         "python_packages": {},
         "commands": {},
         "playwright_browser_installed": False,
+        "playwright_install_strategy": None,
+        "playwright_install_command": None,
+        "playwright_browser": {},
         "status": "ok",
     }
 
@@ -176,12 +186,25 @@ def ensure_runtime(phase: str, *, work_dir: Path | None = None) -> dict[str, Any
         )
 
         if "illustration" in phases:
-            state["playwright_browser_installed"] = _ensure_playwright_browser(
+            playwright_state = _ensure_playwright_browser(
                 venv_python,
                 auto_install=auto_install,
+                auto_update=_env_bool(BROWSER_AUTO_UPDATE_ENV, True),
+                update_scope=os.getenv(
+                    BROWSER_UPDATE_SCOPE_ENV,
+                    "playwright_chromium",
+                ).strip().lower()
+                or "playwright_chromium",
+                explicit_browser_executable=bool(
+                    os.getenv(BROWSER_EXECUTABLE_ENV, "").strip()
+                ),
                 system_install=system_install,
                 package_manager=package_manager,
             )
+            state["playwright_browser"] = playwright_state
+            state["playwright_browser_installed"] = playwright_state["installed"]
+            state["playwright_install_strategy"] = playwright_state["strategy"]
+            state["playwright_install_command"] = playwright_state["command"]
 
         required_commands = _required_commands(phases)
         if required_commands:
@@ -314,21 +337,114 @@ def _ensure_playwright_browser(
     venv_python: Path,
     *,
     auto_install: bool,
+    auto_update: bool,
+    update_scope: str,
+    explicit_browser_executable: bool,
     system_install: str,
     package_manager: str | None,
-) -> bool:
-    if _playwright_browser_installed():
-        return True
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "installed": False,
+        "strategy": "already_present",
+        "command": None,
+        "browser_managed": False,
+        "required_revision": None,
+        "installed_revision": None,
+        "installed_revisions": [],
+        "required_install_path": None,
+        "last_checked_at": _utc_now(),
+        "last_updated_at": None,
+        "update_result": "unchecked",
+    }
+    managed = (not explicit_browser_executable) and update_scope == "playwright_chromium"
+    result["browser_managed"] = managed
+
+    required = _query_required_playwright_browser(venv_python) if managed else {
+        "revision": None,
+        "install_path": None,
+    }
+    installed = _query_installed_playwright_browser(venv_python)
+    required_revision = required.get("revision")
+    installed_revisions = installed.get("revisions", [])
+    installed_revision = _select_installed_playwright_revision(
+        installed_revisions,
+        required_revision=required_revision,
+    )
+    result["required_revision"] = required_revision
+    result["required_install_path"] = required.get("install_path")
+    result["installed_revisions"] = installed_revisions
+    result["installed_revision"] = installed_revision
+
+    if not managed:
+        result["installed"] = bool(installed_revisions)
+        result["update_result"] = "skipped_unmanaged"
+        return result
+
+    if required_revision and required_revision in installed_revisions:
+        result["installed"] = True
+        result["update_result"] = "already_current"
+        return result
+
+    if not required_revision and _playwright_browser_installed(venv_python):
+        result["installed"] = True
+        result["update_result"] = "already_present"
+        return result
+
     if not auto_install:
         raise RuntimeError(
             "Playwright Chromium is missing. Set PAPER_AUTO_INSTALL=true to allow bootstrap."
         )
-    cmd = [str(venv_python), "-m", "playwright", "install", "chromium"]
-    if platform.system() == "Linux" and system_install == "auto" and package_manager == "apt":
-        cmd = [str(venv_python), "-m", "playwright", "install", "--with-deps", "chromium"]
-    _log("Installing Playwright Chromium")
-    _run_command(cmd)
-    return _playwright_browser_installed()
+    if not auto_update and installed_revisions:
+        raise RuntimeError(
+            "Playwright Chromium is out of date for the current Playwright package. "
+            "Set GEMINI_BROWSER_AUTO_UPDATE=true to allow automatic browser refresh."
+        )
+
+    install_args = ["install"]
+    if installed_revisions and required_revision not in installed_revisions:
+        install_args.append("--force")
+    install_args.append("chromium")
+    cmd = [str(venv_python), "-m", "playwright", *install_args]
+    strategy = "direct"
+    if (
+        platform.system() == "Linux"
+        and system_install == "auto"
+        and package_manager == "apt"
+        and _can_use_noninteractive_sudo()
+    ):
+        cmd = [str(venv_python), "-m", "playwright", "install", "--with-deps", *install_args[1:]]
+        strategy = "with_deps"
+    _log(f"Installing Playwright Chromium via {strategy}")
+    try:
+        _run_command(cmd)
+    except subprocess.CalledProcessError:
+        if strategy != "with_deps":
+            raise
+        fallback_cmd = [str(venv_python), "-m", "playwright", *install_args]
+        _log("Playwright --with-deps failed; retrying without system dependency bootstrap")
+        _run_command(fallback_cmd)
+        cmd = fallback_cmd
+        strategy = "direct_fallback"
+    required = _query_required_playwright_browser(venv_python)
+    installed = _query_installed_playwright_browser(venv_python)
+    required_revision = required.get("revision")
+    installed_revisions = installed.get("revisions", [])
+    installed_revision = _select_installed_playwright_revision(
+        installed_revisions,
+        required_revision=required_revision,
+    )
+    result["required_revision"] = required_revision
+    result["required_install_path"] = required.get("install_path")
+    result["installed_revisions"] = installed_revisions
+    result["installed_revision"] = installed_revision
+    result["installed"] = bool(required_revision and required_revision in installed_revisions) or (
+        not required_revision and _playwright_browser_installed(venv_python)
+    )
+    result["strategy"] = strategy
+    result["command"] = cmd
+    result["last_updated_at"] = _utc_now()
+    result["update_result"] = "updated" if result["installed"] else "update_failed"
+    return result
 
 
 def _ensure_system_commands(
@@ -433,6 +549,19 @@ def _sudo_prefix() -> list[str]:
     return []
 
 
+def _can_use_noninteractive_sudo() -> bool:
+    prefix = _sudo_prefix()
+    if not prefix:
+        return hasattr(os, "geteuid") and os.geteuid() == 0
+    result = subprocess.run(
+        [*prefix, "-n", "true"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0
+
+
 def _python_module_available(venv_python: Path, module: str) -> bool:
     cmd = [
         str(venv_python),
@@ -471,7 +600,83 @@ def _query_python_packages(venv_python: Path, modules: list[str]) -> dict[str, s
         return {name: None for name in modules}
 
 
-def _playwright_browser_installed() -> bool:
+def _query_required_playwright_browser(venv_python: Path) -> dict[str, str | None]:
+    result = subprocess.run(
+        [str(venv_python), "-m", "playwright", "install", "--dry-run", "chromium"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    output = "\n".join(filter(None, [result.stdout, result.stderr]))
+    revision: str | None = None
+    install_path: str | None = None
+    for raw_line in output.splitlines():
+        line = raw_line.strip()
+        if revision is None:
+            match = PLAYWRIGHT_REQUIRED_REVISION_RE.search(line)
+            if match:
+                revision = match.group(1)
+        if (
+            install_path is None
+            and "Install location:" in line
+            and "chromium-" in line.lower()
+            and "headless" not in line.lower()
+        ):
+            install_path = line.split(":", 1)[1].strip()
+    return {"revision": revision, "install_path": install_path}
+
+
+def _query_installed_playwright_browser(venv_python: Path) -> dict[str, Any]:
+    result = subprocess.run(
+        [str(venv_python), "-m", "playwright", "install", "--list"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    revisions: list[str] = []
+    paths: list[str] = []
+    output = "\n".join(filter(None, [result.stdout, result.stderr]))
+    for raw_line in output.splitlines():
+        line = raw_line.strip()
+        if not line or "headless" in line.lower():
+            continue
+        if "chromium-" not in line.lower():
+            continue
+        match = PLAYWRIGHT_CHROMIUM_DIR_RE.search(line)
+        if not match:
+            continue
+        revision = match.group(1)
+        if revision not in revisions:
+            revisions.append(revision)
+        paths.append(line)
+    if not revisions:
+        for base in _playwright_cache_roots():
+            if not base.exists():
+                continue
+            for item in sorted(base.iterdir(), reverse=True):
+                match = PLAYWRIGHT_CHROMIUM_DIR_RE.search(item.name)
+                if not match or "headless" in item.name.lower():
+                    continue
+                revision = match.group(1)
+                if revision not in revisions:
+                    revisions.append(revision)
+                paths.append(str(item))
+    return {"revisions": revisions, "paths": paths}
+
+
+def _select_installed_playwright_revision(
+    revisions: list[str],
+    *,
+    required_revision: str | None,
+) -> str | None:
+    if required_revision and required_revision in revisions:
+        return required_revision
+    if not revisions:
+        return None
+    return sorted(revisions, key=lambda item: int(item))[-1]
+
+
+def _playwright_cache_roots() -> list[Path]:
     custom = os.getenv("PLAYWRIGHT_BROWSERS_PATH", "").strip()
     candidates: list[Path] = []
     if custom:
@@ -484,6 +689,15 @@ def _playwright_browser_installed() -> bool:
             home / "AppData" / "Local" / "ms-playwright",
         ]
     )
+    return candidates
+
+
+def _playwright_browser_installed(venv_python: Path | None = None) -> bool:
+    if venv_python is not None:
+        installed = _query_installed_playwright_browser(venv_python)
+        if installed["revisions"]:
+            return True
+    candidates = _playwright_cache_roots()
     for base in candidates:
         if not base.exists():
             continue

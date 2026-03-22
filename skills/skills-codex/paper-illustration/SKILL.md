@@ -37,6 +37,20 @@ The vendored runtime is a selective PaperBanana import plus a browser-backed Gem
 - **GEMINI_BROWSER_PROFILE_MODE = `dedicated`**
 - **GEMINI_BROWSER_PROFILE_DIR** — Dedicated persistent profile
 - **GEMINI_BROWSER_HEADLESS = `false`**
+- **GEMINI_BROWSER_AUTO_INTERACTIVE = `true`**
+- **GEMINI_BROWSER_AUTO_INTERACTIVE_WAIT_SEC = `300`**
+- **GEMINI_BROWSER_AUTO_WAIT_FOR_HUMAN_VERIFICATION = `true`**
+- **GEMINI_BROWSER_AUTO_UPDATE = `true`**
+- **GEMINI_BROWSER_UPDATE_SCOPE = `playwright_chromium`**
+- **GEMINI_BROWSER_CLOSE_INTERACTIVE_AFTER_READY = `true`**
+- **GEMINI_BROWSER_PRUNE_EXTRA_PAGES = `true`**
+- **GEMINI_BROWSER_MAX_INTERACTIVE_PAGES = `1`**
+- **GEMINI_BROWSER_RENDER_SESSION_MODE = `temporary`**
+- **GEMINI_BROWSER_RENDER_RETRY_ON_CONTEXT_LEAK = `true`**
+- **GEMINI_BROWSER_RENDER_MAX_RETRIES = `2`**
+- **GEMINI_BROWSER_MODE_POLICY = `prefer_thinking_fallback_fast`**
+- **GEMINI_BROWSER_REMOTE_DEBUG_PORT = `9223`**
+- **GEMINI_BROWSER_EXECUTABLE_PATH** — Optional explicit browser executable override
 - **PAPER_ILLUSTRATION_API_KEY** — Optional API fallback key
 
 ## Inputs
@@ -86,10 +100,12 @@ The CLI will:
 1. classify candidate figures from the figure plan
 2. mark screenshots / qualitative grids / real photos as `manual_blocker`
 3. default to the browser-backed Gemini web flow
-4. use the Retriever → Planner → Stylist → Visualizer → Critic loop only when `ILLUSTRATION_BACKEND=api`
-5. write final images to `figures/ai_generated/`
-6. write `figures/illustration_manifest.json`
-7. append/update the illustration snippets inside `figures/latex_includes.tex`
+4. reset each render into a fresh temporary chat, explicitly enable Gemini's image tool, wrap the browser prompt in an image-only instruction, and auto-retry if stale chat context leaks in
+5. if temporary-chat retries still surface stale artifacts or no reliable image path, escalate that retry to `new_chat` while preserving the dedicated profile
+6. use the Retriever → Planner → Stylist → Visualizer → Critic loop only when `ILLUSTRATION_BACKEND=api`
+7. write final images to `figures/ai_generated/`
+8. write `figures/illustration_manifest.json`
+9. append/update the illustration snippets inside `figures/latex_includes.tex`
 
 Shared MCP bridge:
 
@@ -107,9 +123,11 @@ claude mcp add gemini-browser -s user -- \
 First use:
 
 1. call `status`
-2. if it returns `needs_login`, call `login`
-3. finish Gemini login manually in the dedicated browser window
-4. rerun `status` until it returns `ready`
+2. if sign-in or human verification is missing, `status` automatically opens or reuses a dedicated interactive Gemini browser window
+3. while waiting, the backend prunes duplicate Gemini/login/verification/blank pages so the dedicated profile stays at a single visible page
+4. finish Gemini login and any “I’m not a robot” or unusual-traffic verification manually in that window
+5. `status` waits for recovery and returns `ready` if it succeeds before timeout; otherwise it returns `needs_login` or `needs_human_verification` and leaves only the required recovery page open
+5. call `login` only when you want to explicitly reopen or keep waiting on the same dedicated session
 
 ### Step 3: Inspect the Manifest
 
@@ -134,6 +152,8 @@ Status values:
 
 - `auto_illustrated`
 - `manual_blocker`
+- `needs_login`
+- `needs_human_verification`
 - `backend_blocker`
 - `auto_generated`
 
@@ -146,7 +166,9 @@ Only mark a figure as manual when it truly depends on external assets such as:
 - real photographs
 - user-provided images
 
-If the browser backend is not ready, report `backend_blocker` and point to `refine-logs/PAPER_RUNTIME_STATE.json`, a rerun of `python3 tools/ensure_paper_runtime.py --phase illustration`, or the dedicated-profile login flow. Only point to `PAPER_ILLUSTRATION_API_KEY` when `ILLUSTRATION_BACKEND=api`.
+If the browser backend reports `needs_login` or `needs_human_verification`, preserve that status and note that the dedicated interactive Gemini window has already been opened or reused. Use `backend_blocker` for other runtime failures such as missing GUI access, DOM drift, unavailable image generation, or download errors. In all cases, point to `refine-logs/PAPER_RUNTIME_STATE.json` or a rerun of `python3 tools/ensure_paper_runtime.py --phase illustration`. Only point to `PAPER_ILLUSTRATION_API_KEY` when `ILLUSTRATION_BACKEND=api`.
+
+The dedicated Gemini profile is automation-owned: duplicate blank tabs, stale Gemini pages, duplicate login pages, and duplicate verification pages are pruned automatically, and a successful recovery leaves no visible automation window behind.
 
 ## Outputs
 
