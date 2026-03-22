@@ -28,6 +28,7 @@ Custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skills for 
 
 ## 📢 What's New
 
+- **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ⚔️ **Experiment debate loop** — `/experiment-bridge` now defaults to a bounded dual-AI debate loop (`code review mode: debate`) with runtime-review re-entry, structured `EXPERIMENT_DEBATE_LOG.md`, and parseable `EXPERIMENT_RUNTIME.json`
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📋 **[Templates](templates/)** — input templates for every workflow. 📄 **7 venue templates** — CVPR, ACL, AAAI, ACM MM added. 🛡️ **Anti-hallucination fix** — Workflow 2 enforces DBLP → CrossRef → [VERIFY]. 🔗 **`base repo`** — clone a GitHub repo as base codebase (`— base repo: https://github.com/org/project`)
 - **2026-03-21** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🏆 **AAAI 2026 accepted — 7/10 with pure Codex CLI!** Built with ARIS-Codex skills by [@xinbo820-web](https://github.com/xinbo820-web). See [Community Showcase](#-community-showcase--papers-built-with-aris)
 - **2026-03-20** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🏆 **First community paper scored 8/10!** CS paper built entirely with ARIS. Congrats to [@DefanXue](https://github.com/DefanXue) & [@Monglitay](https://github.com/Monglitay)! See [Community Showcase](#-community-showcase--papers-built-with-aris)
@@ -92,7 +93,12 @@ claude
 > | `sources` | `all` | Which literature sources to search: `zotero`, `obsidian`, `local`, `web`, or `all` (comma-separated) |
 > | `arxiv download` | `false` | Download top relevant arXiv PDFs during literature survey. When `false`, only fetches metadata (title, abstract, authors) |
 > | `DBLP_BIBTEX` | `true` | Fetch real BibTeX from [DBLP](https://dblp.org)/[CrossRef](https://www.crossref.org) instead of LLM-generated entries. Eliminates hallucinated citations. Zero install |
-> | `code review` | `true` | GPT-5.4 xhigh reviews experiment code before GPU deployment. Set `false` to skip |
+> | `code review` | `true` | Keep the experiment review gate on. Set `false` to preserve the old direct implementation → sanity → deploy path |
+> | `code review mode` | `debate` | `single` = one reviewer pass, `debate` = bounded multi-round executor vs reviewer loop |
+> | `runtime review` | `true` | Re-enter review after sanity failures or blocker-level runtime anomalies |
+> | `optimization review` | `true` | Ask the reviewer for framework / backend / memory / throughput suggestions in a second pass |
+> | `workload profile` | `mixed` | Hint whether the run is `training`, `inference`, or `mixed` so backend recommendations stay semantically valid |
+> | `light profile` | `true` | Request a short hotspot / memory sample during sanity runs when the stack supports it cleanly |
 > | `wandb` | `false` | Auto-add W&B logging to experiment scripts. Set `true` + configure `wandb_project` in CLAUDE.md. `/monitor-experiment` pulls training curves from W&B |
 > | `illustration` | `gemini` | AI illustration in Workflow 3: `gemini` (default, needs `GEMINI_API_KEY`), `mermaid` (free), or `false` (skip) |
 > | `venue` | `ICLR` | Target venue: `ICLR`, `NeurIPS`, `ICML`, `CVPR`, `ACL`, `AAAI`, `ACM`. Determines LaTeX style file and page limit |
@@ -121,7 +127,7 @@ See [full setup guide](#%EF%B8%8F-setup) for details and [alternative model comb
 - 📝 **Paper writing** — narrative → outline → figures → LaTeX → PDF → auto-review (4/10 → 8.5/10), one command. Anti-hallucination citations via [DBLP](https://dblp.org)/[CrossRef](https://www.crossref.org)
 - 🤖 **Cross-model collaboration** — Claude Code executes, GPT-5.4 xhigh reviews. Adversarial, not self-play
 - 📝 **Peer review** — review others' papers as a conference reviewer, with structured scoring and meta-review
-- 🖥️ **Review-driven experiments** — when GPT-5.4 says "run an ablation", Claude Code automatically writes the script, rsyncs to your GPU server, launches in screen, collects results, and folds them back into the paper. Just configure your server in `CLAUDE.md` ([setup guide](#%EF%B8%8F-gpu-server-setup-for-auto-experiments))
+- 🖥️ **Review-driven experiments** — `experiment-bridge` now runs a bounded executor-vs-reviewer debate before deployment, captures `EXPERIMENT_RUNTIME.json`, re-enters review on blocker-level runtime failures, and still folds successful runs back into the paper. Just configure your server in `CLAUDE.md` ([setup guide](#%EF%B8%8F-gpu-server-setup-for-auto-experiments))
 - 🔀 **Flexible models** — default Claude × GPT-5.4, also supports [GLM, MiniMax, Kimi, LongCat, DeepSeek, etc.](#-alternative-model-combinations) — no Claude or OpenAI API required
 - 🛑 **Human-in-the-loop** — configurable checkpoints at key decisions. `AUTO_PROCEED=true` for full autopilot, `false` to approve each step
 - 📱 **[Feishu/Lark notifications](#-feishulark-integration-optional)** — three modes: **off (default, strongly recommended for most users)**, push-only (webhook, mobile alerts), interactive (approve/reject from Feishu). Zero impact when unconfigured
@@ -333,10 +339,10 @@ Already have an experiment plan (from Workflow 1 or your own)? `/experiment-brid
 
 1. 📋 **Parse** the experiment plan (`refine-logs/EXPERIMENT_PLAN.md`)
 2. 💻 **Implement** experiment scripts (reuse existing code, add proper argparse/logging/seeds)
-3. 🔍 **GPT-5.4 code review** — cross-model review catches logic bugs before wasting GPU hours (`code review: true` by default)
-4. ✅ **Sanity check** — run the smallest experiment first to catch runtime bugs
+3. ⚔️ **Dual-AI debate loop** — GPT-5.4 reviews correctness first, then optimization / stability (`code review mode: debate` by default)
+4. ✅ **Sanity + runtime review** — run the smallest experiment first, capture `EXPERIMENT_RUNTIME.json`, and re-enter review on OOM / NaN / malformed outputs / slowdown
 5. 🚀 **Deploy** full experiment suite to GPU via `/run-experiment`
-6. 📊 **Collect** initial results and update the experiment tracker
+6. 📊 **Collect** initial results plus runtime evidence and update the experiment tracker
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -346,17 +352,18 @@ Already have an experiment plan (from Workflow 1 or your own)? `/experiment-brid
 │         │                                                        │
 │         ▼                                                        │
 │   ┌──────────┐     ┌──────────┐     ┌──────────┐               │
-│   │ Claude   │────▶│ GPT-5.4  │────▶│ Sanity   │               │
-│   │ Code     │     │ xhigh    │     │ Check    │               │
-│   │ writes   │     │ reviews  │     │ (1 GPU)  │               │
-│   │ code     │     │ code     │     │          │               │
+│   │ Claude   │────▶│ Debate   │────▶│ Sanity + │               │
+│   │ Code     │     │ loop     │     │ runtime  │               │
+│   │ writes   │     │ (2-pass) │     │ review   │               │
+│   │ code     │     │          │     │ (1 GPU)  │               │
 │   └──────────┘     └──────────┘     └──────────┘               │
 │                                          │                       │
 │                                          ▼                       │
 │   ┌──────────┐     ┌──────────┐     ┌──────────┐               │
 │   │ Collect  │◀────│ Monitor  │◀────│ Deploy   │               │
 │   │ results  │     │ progress │     │ to GPUs  │               │
-│   │          │     │ (+ W&B)  │     │          │               │
+│   │ + runtime│     │ (+ W&B)  │     │          │               │
+│   │ evidence │     │          │     │          │               │
 │   └──────────┘     └──────────┘     └──────────┘               │
 │         │                                                        │
 │         ▼                                                        │
@@ -368,7 +375,7 @@ Already have an experiment plan (from Workflow 1 or your own)? `/experiment-brid
 
 > 💡 **One-command shortcut:** `/experiment-bridge` reads `refine-logs/EXPERIMENT_PLAN.md` automatically. Or point it to any plan: `/experiment-bridge "my_plan.md"`.
 
-> ⚙️ `CODE_REVIEW`, `AUTO_DEPLOY`, `SANITY_FIRST`, `MAX_PARALLEL_RUNS` are configurable — see [Customization](#%EF%B8%8F-customization).
+> ⚙️ `CODE_REVIEW`, `CODE_REVIEW_MODE`, `RUNTIME_REVIEW`, `OPTIMIZATION_REVIEW`, `LIGHT_PROFILE`, `AUTO_DEPLOY`, `SANITY_FIRST`, and `MAX_PARALLEL_RUNS` are configurable — see [Customization](#%EF%B8%8F-customization).
 
 ### Workflow 2: Auto Research Loop 🔁 (sleep & wake up to results)
 
@@ -563,8 +570,8 @@ After Workflow 3 generates the paper, `/auto-paper-improvement-loop` runs 2 roun
 
 | Skill | Description | Codex MCP? |
 |-------|-------------|:---:|
-| 🔗 **[`experiment-bridge`](skills/experiment-bridge/SKILL.md)** | Read experiment plan → implement code → sanity check → deploy to GPU → collect initial results | No |
-| ├ 🚀 [`run-experiment`](skills/run-experiment/SKILL.md) | Deploy experiments to local (MPS/CUDA) or remote GPU servers | No |
+| 🔗 **[`experiment-bridge`](skills/experiment-bridge/SKILL.md)** | Read experiment plan → implement code → debate with reviewer → sanity/runtime review → deploy to GPU → collect initial results | No |
+| ├ 🚀 [`run-experiment`](skills/run-experiment/SKILL.md) | Deploy experiments to local (MPS/CUDA) or remote GPU servers and write `EXPERIMENT_RUNTIME.json` | No |
 | └ 👀 [`monitor-experiment`](skills/monitor-experiment/SKILL.md) | Monitor running experiments, check progress, collect results | No |
 
 ### 🔁 Workflow 2: Auto Research Loop
@@ -1037,7 +1044,12 @@ Skills are plain Markdown files. Fork and customize:
 | `ARXIV_DOWNLOAD` | false | Download top arXiv PDFs after literature search | → `idea-discovery` → `research-lit` |
 | `HUMAN_CHECKPOINT` | false | When `true`, pause after each review round for approval | → `auto-review-loop` |
 | `WANDB` | false | Auto-add W&B logging to experiments | → `experiment-bridge` → `run-experiment` |
-| `CODE_REVIEW` | true | GPT-5.4 reviews experiment code before deployment | → `experiment-bridge` |
+| `CODE_REVIEW` | true | Keep the experiment review gate enabled | → `experiment-bridge` |
+| `CODE_REVIEW_MODE` | `debate` | `single` = one pass, `debate` = bounded multi-round executor vs reviewer loop | → `experiment-bridge` |
+| `RUNTIME_REVIEW` | true | Re-enter review after sanity failures or blocker-level runtime anomalies | → `experiment-bridge` |
+| `OPTIMIZATION_REVIEW` | true | Run a second-pass optimization review for backend / memory / throughput opportunities | → `experiment-bridge` |
+| `WORKLOAD_PROFILE` | `mixed` | Hint whether the run is training-heavy, inference-heavy, or mixed | → `experiment-bridge` |
+| `LIGHT_PROFILE` | true | Request a short hotspot / memory sample during sanity when supported | → `experiment-bridge` → `run-experiment` |
 | `BASE_REPO` | false | GitHub repo URL to clone as base codebase for experiments | → `experiment-bridge` |
 | `ILLUSTRATION` | `gemini` | AI illustration: `gemini` (default), `mermaid` (free), or `false` (skip) | → `paper-writing` |
 
@@ -1068,14 +1080,21 @@ Override inline: `/idea-discovery "topic" — pilot budget: 4h per idea, sources
 
 | Constant | Default | Description |
 |----------|---------|-------------|
-| `CODE_REVIEW` | true | GPT-5.4 xhigh reviews code before deployment. Catches logic bugs before wasting GPU hours |
+| `CODE_REVIEW` | true | Keep the experiment review gate enabled. Set `false` to preserve the old direct implementation → sanity → deploy path |
+| `CODE_REVIEW_MODE` | `debate` | `single` = one reviewer pass, `debate` = bounded multi-round executor vs reviewer loop |
+| `MAX_DEBATE_ROUNDS` | 3 | Maximum pre-run debate rounds before unresolved critical blockers halt auto-deploy |
+| `RUNTIME_REVIEW` | true | Re-enter review after sanity failures or blocker-level runtime anomalies |
+| `OPTIMIZATION_REVIEW` | true | Ask the reviewer for framework / backend / memory / throughput suggestions in a second pass |
+| `OPTIMIZATION_AUTHORITY` | `recommend` | Recommendation-only in v1. Debate may suggest a switch, but must not silently mutate frameworks or kernels |
+| `WORKLOAD_PROFILE` | `mixed` | Hint whether the workload is `training`, `inference`, or `mixed` |
+| `LIGHT_PROFILE` | true | Request a short hotspot / memory sample during sanity when supported; otherwise fall back to coarse evidence |
 | `AUTO_DEPLOY` | true | Automatically deploy experiments after implementation + review. Set `false` to manually inspect |
 | `SANITY_FIRST` | true | Run smallest experiment first to catch setup bugs before full deployment |
 | `MAX_PARALLEL_RUNS` | 4 | Maximum experiments to deploy in parallel (limited by available GPUs) |
 | `WANDB` | false | Auto-add W&B logging. Requires `wandb_project` in CLAUDE.md |
 | `BASE_REPO` | false | GitHub repo URL to clone as base codebase for experiments |
 
-Override inline: `/experiment-bridge — base repo: https://github.com/org/project`
+Override inline: `/experiment-bridge — code review mode: single, workload profile: inference, base repo: https://github.com/org/project`
 
 ### Literature Search (`research-lit`)
 

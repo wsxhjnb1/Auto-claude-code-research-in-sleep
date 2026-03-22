@@ -1,7 +1,9 @@
 ---
 name: "experiment-bridge"
-description: "Workflow 1.5: Bridge between idea discovery and auto review. Reads EXPERIMENT_PLAN.md, implements experiment code, runs a bounded debate using a secondary Codex agent, deploys to GPU, and collects initial results."
+description: "Workflow 1.5: Bridge between idea discovery and auto review. Reads EXPERIMENT_PLAN.md, implements experiment code, runs a bounded debate using Claude Code via claude-review MCP, deploys to GPU, and collects initial results."
 ---
+
+> Override for Codex users who want **Claude Code**, not a second Codex agent, to act as the reviewer. Install this package **after** `skills/skills-codex/*`.
 
 # Workflow 1.5: Experiment Bridge
 
@@ -14,7 +16,7 @@ This skill bridges Workflow 1 (idea discovery + method refinement) and Workflow 
 ```
 Workflow 1 output:                    This skill:                                                         Workflow 2 input:
 refine-logs/EXPERIMENT_PLAN.md   →   implement → debate → sanity/runtime review → deploy → collect   →   initial results ready
-refine-logs/EXPERIMENT_TRACKER.md     code        (secondary Codex agent)   (/run-experiment)            for /auto-review-loop
+refine-logs/EXPERIMENT_TRACKER.md     code        (Claude reviewer via `claude-review` MCP)   (/run-experiment)            for /auto-review-loop
 refine-logs/FINAL_PROPOSAL.md
 ```
 
@@ -34,14 +36,20 @@ The debate loop is default-enabled in v1. It is framework-agnostic at the core, 
 - **SANITY_FIRST = true** — Run the sanity-stage experiment first (smallest, fastest) before launching the rest. Catches setup bugs early.
 - **MAX_PARALLEL_RUNS = 4** — Maximum number of experiments to deploy in parallel (limited by available GPUs).
 - **BASE_REPO = false** — GitHub repo URL to use as base codebase. When set, clone the repo first and implement experiments on top of it. When `false` (default), write code from scratch or reuse existing project files.
-- **REVIEWER_MODEL = `gpt-5.4`** — Model used via a secondary Codex agent. Must be an OpenAI model (for example `gpt-5.4`, `o3`, `gpt-4o`).
+- **REVIEWER_MODEL = `claude-review`** — Claude reviewer invoked through the local `claude-review` MCP bridge. Set `CLAUDE_REVIEW_MODEL` if you need a specific Claude model override.
 
 > Override: `/experiment-bridge "EXPERIMENT_PLAN.md" — code review mode: single, workload profile: inference, light profile: false`
 
 ## Prerequisites
 
-- Use `spawn_agent` and `send_input` when the user has explicitly allowed delegation or subagents.
-- If delegation is not allowed, run the same debate loop locally and preserve the same deliverable structure.
+- Install the base Codex-native skills first: copy `skills/skills-codex/*` into `~/.codex/skills/`.
+- Then install this overlay package: copy `skills/skills-codex-claude-review/*` into `~/.codex/skills/` and allow it to overwrite the same skill names.
+- Register the local reviewer bridge:
+  ```bash
+  codex mcp add claude-review -- python3 ~/.codex/mcp-servers/claude-review/server.py
+  ```
+- This gives Codex access to `mcp__claude-review__review_start`, `mcp__claude-review__review_reply_start`, and `mcp__claude-review__review_status`.
+
 
 ## Inputs
 
@@ -63,7 +71,7 @@ Persist state to `refine-logs/EXPERIMENT_DEBATE_STATE.json` after each review ro
   "current_phase": "pre_run_review",
   "review_mode": "debate",
   "round": 2,
-  "agent_id": "019d0abc-...",
+  "thread_id": "019d0abc-...",
   "last_runtime_artifact": "refine-logs/EXPERIMENT_RUNTIME.json",
   "open_blockers": ["R1-F2", "runtime-oom-1"],
   "status": "in_progress",
@@ -157,9 +165,8 @@ This phase has two explicit passes inside the same lifecycle:
 Round 1 prompt:
 
 ```
-spawn_agent:
-  reasoning_effort: xhigh
-  message: |
+mcp__claude-review__review_start:
+  prompt: |
     Review the following experiment implementation through TWO PASSES.
 
     ## Experiment Plan
@@ -201,6 +208,8 @@ spawn_agent:
     - Evidence required to accept or reject it
 ```
 
+After this start call, immediately save the returned `jobId` and poll `mcp__claude-review__review_status` with a bounded `waitSeconds` until `done=true`. Treat the completed status payload's `response` as the reviewer output, and save the completed `threadId` for any follow-up round.
+
 #### If `CODE_REVIEW_MODE = single`
 
 1. Run one reviewer pass.
@@ -220,10 +229,9 @@ Run a capped executor-vs-reviewer loop:
 3. **Rounds 2..N** — continue the same dialogue and focus only on unresolved findings:
 
 ```
-send_input:
-  id: [saved from round 1]
-  reasoning_effort: xhigh
-  message: |
+mcp__claude-review__review_reply_start:
+  threadId: [saved from round 1]
+  prompt: |
     Debate round [N/MAX_DEBATE_ROUNDS].
 
     Since your last review, we resolved each finding as follows:
@@ -235,6 +243,8 @@ send_input:
     Stop flagging an item once it has enough evidence or a valid rejection.
     Call out any remaining Pass A / CRITICAL blockers explicitly.
 ```
+
+After this start call, immediately save the returned `jobId` and poll `mcp__claude-review__review_status` with a bounded `waitSeconds` until `done=true`. Treat the completed status payload's `response` as the reviewer output, and save the completed `threadId` for any follow-up round.
 
 4. Stop when one of the following is true:
    - no unresolved `Pass A / CRITICAL` findings remain
@@ -375,7 +385,7 @@ Ready for Workflow 2:
 
 ## Key Rules
 
-- ALWAYS use `reasoning_effort: xhigh` for reviews
+- Always ask the Claude reviewer for strict, high-rigor feedback.
 - **CRITICAL — Evaluation must use dataset ground truth.** NEVER compare against another model's outputs as the source of truth.
 - **Follow the plan.** Do not invent experiments not in `EXPERIMENT_PLAN.md`.
 - **Sanity first.** Never deploy a full suite without verifying the sanity stage passes and `EXPERIMENT_RUNTIME.json` is usable.

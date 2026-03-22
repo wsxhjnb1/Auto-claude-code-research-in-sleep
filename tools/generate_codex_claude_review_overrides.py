@@ -17,6 +17,7 @@ TARGET_SKILLS = [
     "research-review",
     "novelty-check",
     "research-refine",
+    "experiment-bridge",
     "auto-review-loop",
     "paper-plan",
     "paper-figure",
@@ -66,7 +67,8 @@ def extract_field(frontmatter: str, field: str) -> str:
 
 
 def build_frontmatter(name: str, description: str) -> str:
-    safe_desc = description.replace('"', '\\"')
+    normalized_desc = description.replace('\\"', '"')
+    safe_desc = normalized_desc.replace('"', '\\"')
     return f'---\nname: "{name}"\ndescription: "{safe_desc}"\n---\n\n'
 
 

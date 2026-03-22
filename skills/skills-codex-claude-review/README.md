@@ -19,6 +19,7 @@ Current overrides:
 - `research-review`
 - `novelty-check`
 - `research-refine`
+- `experiment-bridge`
 - `auto-review-loop`
 - `paper-plan`
 - `paper-figure`

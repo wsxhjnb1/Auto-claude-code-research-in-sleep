@@ -77,6 +77,7 @@ codex -C /path/to/your/project
 - `research-review`
 - `novelty-check`
 - `research-refine`
+- `experiment-bridge`
 - `auto-review-loop`
 - `paper-plan`
 - `paper-figure`
