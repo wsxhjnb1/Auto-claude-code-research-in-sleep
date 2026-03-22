@@ -22,13 +22,14 @@ Compile the LaTeX paper and fix any issues: **$ARGUMENTS**
 Check that the compilation environment is ready:
 
 ```bash
-# Check LaTeX installation
+python3 tools/ensure_paper_runtime.py --phase compile
+
+# Check LaTeX installation after bootstrap
 which pdflatex && which latexmk && which bibtex
 
-# If not installed, provide instructions:
-# macOS: brew install --cask mactex-no-gui
-# Ubuntu: sudo apt-get install texlive-full
-# Server: conda install -c conda-forge texlive-core
+# Manual fallback only if automatic bootstrap is disabled or unsupported:
+# macOS: brew install --cask mactex-no-gui && brew install poppler
+# Ubuntu: sudo apt-get install texlive-full latexmk poppler-utils
 ```
 
 Verify all required files exist:
@@ -63,7 +64,7 @@ If compilation fails, read `compile.log` and fix common errors:
 ```
 ! LaTeX Error: File `somepackage.sty' not found.
 ```
-→ Install via `tlmgr install somepackage` or remove the `\usepackage` if unused.
+→ First try `python3 tools/ensure_paper_runtime.py --latex-package somepackage`. If that fails, fall back to `tlmgr install somepackage` or remove the `\usepackage` if unused.
 
 **Undefined references:**
 ```
@@ -247,4 +248,3 @@ For conference submission, additional checks:
 | ICLR 2026 | `iclr2026_conference.sty` | `natbib` (`\citep`/`\citet`) | 9 pages (to Conclusion end) | OpenReview |
 | NeurIPS 2025 | `neurips_2025.sty` | `natbib` (`\citep`/`\citet`) | 9 pages (to Conclusion end) | OpenReview |
 | ICML 2025 | `icml2025.sty` | `natbib` (`\citep`/`\citet`) | 8 pages (to Conclusion end) | OpenReview |
-

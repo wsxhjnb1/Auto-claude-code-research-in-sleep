@@ -16,6 +16,9 @@ Draft a LaTeX paper based on: **$ARGUMENTS**
 - **ANONYMOUS = true** — If true, use anonymous author block. Set `false` for camera-ready.
 - **MAX_PAGES = 9** — Main body page limit. Counts from first page to end of Conclusion section. References and appendix are NOT counted.
 - **DBLP_BIBTEX = true** — Fetch real BibTeX from DBLP/CrossRef instead of LLM-generated entries. Eliminates hallucinated citations. Zero install required. Set `false` to use legacy behavior (LLM search + `[VERIFY]` markers).
+- **PAPER_AUTO_INSTALL = true** — Auto-bootstrap Workflow 3 dependencies on first run.
+- **PAPER_VENV_DIR = `.venv`** — Project-local Python environment for paper tooling.
+- **PAPER_SYSTEM_INSTALL = `auto`** — Auto-install supported system packages via `apt-get` or `brew`.
 
 ## Inputs
 
@@ -79,6 +82,12 @@ paper/
 ## Workflow
 
 ### Step 0: Backup and Clean
+
+Bootstrap the write-time runtime first:
+
+```bash
+python3 tools/ensure_paper_runtime.py --phase write
+```
 
 If `paper/` already exists, back up to `paper-backup-{timestamp}/` before overwriting. Never silently destroy existing work.
 

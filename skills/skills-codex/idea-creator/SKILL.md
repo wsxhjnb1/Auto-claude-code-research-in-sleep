@@ -228,7 +228,6 @@ After this skill produces the ranked report:
 /novelty-check "top idea"     → deep novelty verification (already done in Phase 4, but user can re-run)
 /research-review "top idea"   → external critical feedback
 implement                     → write code
-/run-experiment               → deploy to GPU
+/experiment-bridge            → implement pilots, sanity-check, and deploy to GPU
 /auto-review-loop             → iterate until submission-ready
 ```
-

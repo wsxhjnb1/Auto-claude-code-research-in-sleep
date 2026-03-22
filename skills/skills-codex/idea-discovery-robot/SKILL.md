@@ -347,9 +347,8 @@ After this workflow identifies a strong robotics idea:
 ```
 /idea-discovery-robot "direction"   ← you are here
 implement sim-first pilot
-/run-experiment                     ← if infrastructure exists
+/experiment-bridge                  ← if infrastructure exists
 /auto-review-loop "top robotics idea"
 ```
 
 If no simulator or benchmark is available yet, stop at the report and ask the user to choose whether to build infrastructure or pivot to a more executable idea.
-

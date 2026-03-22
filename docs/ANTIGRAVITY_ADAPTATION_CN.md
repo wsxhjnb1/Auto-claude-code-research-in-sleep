@@ -263,7 +263,9 @@ Antigravity 通过 `SKILL.md` 中的 YAML `description` 字段自动发现 ARIS 
 | 1 | 创意发现：`skills/idea-discovery/SKILL.md` + 研究方向 | `IDEA_REPORT.md`, `refine-logs/FINAL_PROPOSAL.md`, `refine-logs/EXPERIMENT_PLAN.md` |
 | 2 | 实验桥接：`skills/experiment-bridge/SKILL.md` | 实验脚本与结果 |
 | 3 | 自动评审：`skills/auto-review-loop/SKILL.md` | `AUTO_REVIEW.md` |
-| 4 | 论文写作：`skills/paper-writing/SKILL.md` + `NARRATIVE_REPORT.md` | `paper/` 目录 |
+| 4 | 论文写作：`skills/paper-writing/SKILL.md` + `NARRATIVE_REPORT.md`（若已有工作流 2 工件则可省略） | `paper/` 目录 |
+
+> **说明：** 第 4 阶段最好有 `NARRATIVE_REPORT.md`，但更新后的 `paper-writing` 已支持在文件缺失时，自动从 `AUTO_REVIEW.md`、proposal / experiment 工件和运行时证据合成它。目标格式可参考 [NARRATIVE_REPORT_EXAMPLE.md](NARRATIVE_REPORT_EXAMPLE.md)。
 
 ## 6. MCP 工具对照
 

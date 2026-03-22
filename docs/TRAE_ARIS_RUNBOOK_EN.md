@@ -230,14 +230,15 @@ Use MCP tool mcp__codex__codex for external review.
 **Trae equivalent:**
 ```
 Use paper-writing skill.
-Input: NARRATIVE_REPORT.md in project root.
+Input: NARRATIVE_REPORT.md in project root, or let the updated workflow synthesize it first from Workflow 2 artifacts.
 
 Use the following sub-skills in order:
 1. Use paper-plan skill — Outline + claims-evidence matrix
-2. Use paper-figure skill — Generate figures
-3. Use paper-write skill — Write LaTeX sections
-4. Use paper-compile skill — Compile PDF
-5. Use auto-paper-improvement-loop skill — Review and polish
+2. Use paper-figure skill — Generate data plots and tables
+3. Use paper-illustration skill — Generate hero / architecture / method figures
+4. Use paper-write skill — Write LaTeX sections
+5. Use paper-compile skill — Compile PDF
+6. Use auto-paper-improvement-loop skill — Review and polish
 ```
 
 ### Full Pipeline Staging

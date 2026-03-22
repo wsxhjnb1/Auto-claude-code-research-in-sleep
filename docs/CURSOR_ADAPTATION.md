@@ -209,11 +209,11 @@ For the full pipeline (`/research-pipeline`), break it into stages across chat s
 | 1 | `@skills/idea-discovery/SKILL.md` + your direction | `IDEA_REPORT.md`, `refine-logs/FINAL_PROPOSAL.md`, `refine-logs/EXPERIMENT_PLAN.md` |
 | 2 | `@skills/experiment-bridge/SKILL.md` + `@refine-logs/EXPERIMENT_PLAN.md` + `@refine-logs/FINAL_PROPOSAL.md` | Experiment scripts, results |
 | 3 | `@skills/auto-review-loop/SKILL.md` + your topic | `AUTO_REVIEW.md` |
-| 4 | `@skills/paper-writing/SKILL.md` + `@NARRATIVE_REPORT.md` | `paper/` directory |
+| 4 | `@skills/paper-writing/SKILL.md` + `@NARRATIVE_REPORT.md` (optional if Workflow 2 artifacts already exist) | `paper/` directory |
 
 Each stage reads the previous stage's output files, so context carries forward even across sessions.
 
-> **Note:** Stage 4 expects a `NARRATIVE_REPORT.md` describing your research story (claims, experiments, results). This is typically written by you based on `AUTO_REVIEW.md` and experiment results — see [NARRATIVE_REPORT_EXAMPLE.md](NARRATIVE_REPORT_EXAMPLE.md) for the expected format.
+> **Note:** Stage 4 works best with a `NARRATIVE_REPORT.md`, but the updated `paper-writing` pipeline can also synthesize it from `AUTO_REVIEW.md`, proposal/experiment artifacts, and runtime evidence if the file is missing — see [NARRATIVE_REPORT_EXAMPLE.md](NARRATIVE_REPORT_EXAMPLE.md) for the target structure.
 
 ## 5. MCP Tool Calls
 

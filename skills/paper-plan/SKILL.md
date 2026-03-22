@@ -12,7 +12,7 @@ Generate a structured, section-by-section paper outline from: **$ARGUMENTS**
 ## Constants
 
 - **REVIEWER_MODEL = `gpt-5.4`** — Model used via Codex MCP for outline review. Must be an OpenAI model.
-- **TARGET_VENUE = `ICLR`** — Default venue. User can override (e.g., `/paper-plan "topic" — venue: NeurIPS`). Supported: `ICLR`, `NeurIPS`, `ICML`.
+- **TARGET_VENUE = `ICLR`** — Default venue. User can override (e.g., `/paper-plan "topic" — venue: NeurIPS`). Supported: `ICLR`, `NeurIPS`, `ICML`, `CVPR`, `ACL`, `AAAI`, `ACM`.
 - **MAX_PAGES** — Main body page limit, measured from first page to end of Conclusion section (excluding references, appendix, and acknowledgements). ICLR=9, NeurIPS=9, ICML=8.
 
 ## Inputs
@@ -20,7 +20,7 @@ Generate a structured, section-by-section paper outline from: **$ARGUMENTS**
 The skill expects one or more of these in the project directory:
 
 1. **NARRATIVE_REPORT.md** or **STORY.md** — research narrative with claims and evidence
-2. **GPT54_AUTO_REVIEW.md** — auto-review loop conclusions
+2. **AUTO_REVIEW.md** — canonical auto-review loop conclusions
 3. **Experiment results** — JSON files in `figures/`, screen logs, tables
 4. **IDEA_REPORT.md** — from idea-discovery pipeline (if applicable)
 
@@ -163,7 +163,7 @@ For each section, specify:
 
 ### Step 4: Figure Plan
 
-List every figure and table:
+List every figure and table. This plan is the handoff contract for both `/paper-figure` and `/paper-illustration`:
 
 ```markdown
 ## Figure Plan
@@ -182,6 +182,7 @@ List every figure and table:
 - What the visual difference should demonstrate
 - Caption draft that clearly states the comparison
 - Why the figure helps a skim reader understand the paper before reading the full method
+- Whether it should go to `/paper-illustration` (`hero`, `architecture`, `method`, `workflow`) or `/paper-figure` (`plot`, `table`, `heatmap`, etc.)
 
 ### Step 5: Citation Scaffolding
 
@@ -257,7 +258,8 @@ Save the final outline to `PAPER_PLAN.md` in the project root:
 [from Step 6, summarized]
 
 ## Next Steps
-- [ ] /paper-figure to generate all figures
+- [ ] /paper-figure for data plots and tables
+- [ ] /paper-illustration for hero / architecture / method figures
 - [ ] /paper-write to draft LaTeX
 - [ ] /paper-compile to build PDF
 ```

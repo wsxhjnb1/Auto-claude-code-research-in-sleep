@@ -195,7 +195,7 @@ Finalize `IDEA_REPORT.md` with all accumulated information:
 - Tracker: `refine-logs/EXPERIMENT_TRACKER.md`
 
 ## Next Steps
-- [ ] /run-experiment to deploy experiments from the plan
+- [ ] /experiment-bridge to implement, review, and deploy experiments from the plan
 - [ ] /auto-review-loop to iterate until submission-ready
 - [ ] Or invoke /research-pipeline for the complete end-to-end flow
 ```
@@ -218,7 +218,7 @@ After this pipeline produces a validated top idea:
 
 ```
 /idea-discovery "direction"         ← you are here (Workflow 1, includes method refinement + experiment planning)
-/run-experiment                     ← deploy experiments from the plan
+/experiment-bridge                  ← implement, review, and deploy experiments from the plan
 /auto-review-loop "top idea"        ← Workflow 2: iterate until submission-ready
 
 Or use /research-pipeline for the full end-to-end flow.

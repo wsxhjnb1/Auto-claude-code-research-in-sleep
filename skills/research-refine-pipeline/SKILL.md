@@ -134,7 +134,7 @@ Write `refine-logs/PIPELINE_SUMMARY.md`:
 - [Mitigation]:
 
 ## Next Action
-- Proceed to `/run-experiment`
+- Proceed to `/experiment-bridge`
 ```
 
 ### Phase 5: Present a Brief Summary to the User
@@ -153,7 +153,7 @@ Pipeline summary:
 - refine-logs/PIPELINE_SUMMARY.md
 
 Best next step:
-- /run-experiment
+- /experiment-bridge
 ```
 
 ## Key Rules
@@ -175,5 +175,5 @@ Best next step:
 /research-refine-pipeline -> one-shot method + experiment planning
 /research-refine   -> method refinement only
 /experiment-plan   -> experiment planning only
-/run-experiment    -> execution
+/experiment-bridge -> implementation, review, and deployment
 ```

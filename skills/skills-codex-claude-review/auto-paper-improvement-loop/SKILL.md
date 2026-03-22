@@ -141,6 +141,7 @@ Parse the review and implement fixes by severity:
 ### Step 4: Recompile Round 1
 
 ```bash
+python3 tools/ensure_paper_runtime.py --phase compile
 cd paper && latexmk -C && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
 cp main.pdf main_round1.pdf
 ```
@@ -183,6 +184,7 @@ Same process as Step 3. Typical Round 2 fixes:
 ### Step 7: Recompile Round 2
 
 ```bash
+python3 tools/ensure_paper_runtime.py --phase compile
 cd paper && latexmk -C && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
 cp main.pdf main_round2.pdf
 ```

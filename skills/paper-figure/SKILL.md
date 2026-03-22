@@ -16,11 +16,11 @@ Generate all figures and tables for a paper based on: **$ARGUMENTS**
 | **Data-driven plots** | ✅ Yes | Line plots (training curves), bar charts (method comparison), scatter plots, heatmaps, box/violin plots |
 | **Comparison tables** | ✅ Yes | LaTeX tables comparing prior bounds, method features, ablation results |
 | **Multi-panel figures** | ✅ Yes | Subfigure grids combining multiple plots (e.g., 3×3 dataset × method) |
-| **Architecture/pipeline diagrams** | ❌ No — manual | Model architecture, data flow diagrams, system overviews. At best can generate a rough TikZ skeleton, but **expect to draw these yourself** using tools like draw.io, Figma, or TikZ |
+| **Architecture/pipeline diagrams** | ↪ Use `/paper-illustration` | Model architecture, data flow diagrams, system overviews |
 | **Generated image grids** | ❌ No — manual | Grids of generated samples (e.g., GAN/diffusion outputs). These come from running your model, not from this skill |
 | **Photographs / screenshots** | ❌ No — manual | Real-world images, UI screenshots, qualitative examples |
 
-**In practice:** For a typical ML paper, this skill handles ~60% of figures (all data plots + tables). The remaining ~40% (hero figure, architecture diagram, qualitative results) need to be created manually and placed in `figures/` before running `/paper-write`. The skill will detect these as "existing figures" and preserve them.
+**In practice:** This skill owns data plots and tables. Hero figures, architecture diagrams, and method illustrations should be delegated to `/paper-illustration`. Only true external media such as qualitative sample grids, screenshots, and photographs remain manual blockers.
 
 ## Constants
 
@@ -55,8 +55,18 @@ Parse the Figure Plan table from PAPER_PLAN.md:
 
 Identify:
 - Which figures can be auto-generated from data
-- Which need manual creation (architecture diagrams, etc.)
+- Which should be delegated to `/paper-illustration`
 - Which are comparison tables (generate as LaTeX)
+- Which still require external user assets
+
+### Step 1.5: Bootstrap the Plotting Runtime
+
+```bash
+python3 tools/ensure_paper_runtime.py --phase figure
+PAPER_PY=.venv/bin/python
+```
+
+Use `PAPER_PY` for any generated plotting scripts. Do not assume bare `python3` sees the project-local packages.
 
 ### Step 2: Set Up Plotting Environment
 
@@ -164,18 +174,17 @@ Method & Rate & Depends on $D$? & Multi-modal? \\
 \end{table}
 ```
 
-**Architecture/pipeline diagrams** (MANUAL — outside this skill's scope):
-- These require manual creation using draw.io, Figma, Keynote, or TikZ
-- This skill can generate a rough TikZ skeleton as a starting point, but **do not expect publication-quality results**
-- If the figure already exists in `figures/`, preserve it and generate only the LaTeX `\includegraphics` snippet
-- Flag as `[MANUAL]` in the figure plan and `latex_includes.tex`
+**Architecture/pipeline diagrams**:
+- Do **not** default these to manual creation.
+- Delegate them to `/paper-illustration`, which writes `figures/ai_generated/` and `figures/illustration_manifest.json`.
+- Only flag them as manual if they depend on screenshots, qualitative grids, or other external assets.
 
 ### Step 5: Run All Scripts
 
 ```bash
 # Run all figure generation scripts
 for script in gen_fig*.py; do
-    python "$script"
+    $PAPER_PY "$script"
 done
 ```
 
@@ -195,7 +204,7 @@ For each figure, output the LaTeX code to include it:
 \end{figure}
 ```
 
-Save all snippets to `figures/latex_includes.tex` for easy copy-paste into the paper.
+Save all snippets to `figures/latex_includes.tex` for easy copy-paste into the paper. Preserve any illustration snippets that were already appended by `/paper-illustration`.
 
 ### Step 7: Figure Quality Review with REVIEWER_MODEL
 

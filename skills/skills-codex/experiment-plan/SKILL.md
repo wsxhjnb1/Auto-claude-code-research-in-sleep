@@ -236,7 +236,6 @@ Tracker file: refine-logs/EXPERIMENT_TRACKER.md
 /research-refine-pipeline -> one-shot method + experiment planning
 /research-refine   -> method and claim refinement
 /experiment-plan   -> detailed experiment roadmap
-/run-experiment    -> execute the runs
+/experiment-bridge -> implement, sanity-check, and execute the runs
 /auto-review-loop  -> react to results and iterate on the paper
 ```
-

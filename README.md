@@ -41,7 +41,7 @@ Custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skills for 
 - **2026-03-18** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🖱️ **[Cursor adaptation guide](docs/CURSOR_ADAPTATION.md)** — use ARIS skills in [Cursor](https://www.cursor.com/) with `@`-reference, MCP setup, and state file recovery. Community contribution by [@YecanLee](https://github.com/YecanLee)
 - **2026-03-18** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🤖 **[Codex CLI native skills](skills/skills-codex/)** — full 31-skill ARIS set for [Codex CLI](https://github.com/openai/codex) using `spawn_agent`. Community contributions by [@Falling-Flower](https://github.com/Falling-Flower) & [@No-518](https://github.com/No-518)
 - **2026-03-18** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📝 **[`grant-proposal`](skills/grant-proposal/SKILL.md)** — Draft structured grant proposals from research ideas. Supports 9 agencies: KAKENHI (Japan), NSF (US), NSFC (China, incl. 面上/青年/优青/杰青/海外优青/重点), ERC (EU), DFG, SNSF, ARC, NWO, and generic. Chains `/research-lit` → `/novelty-check` → `/research-review` → `/paper-illustration`. Community contribution by [@dengzhe-hou](https://github.com/dengzhe-hou)
-- **2026-03-18** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🎨 **[`paper-illustration`](skills/paper-illustration/SKILL.md)** — AI-generated publication-quality architecture diagrams and method figures. Claude plans → Gemini renders → iterative refinement until score ≥ 9. Integrated into Workflow 3 (`illustration: true`, requires `GEMINI_API_KEY`). Built on [PaperBanana](https://github.com/dwzhu-pku/PaperBanana). Community contribution by [@Joseph-li343](https://github.com/Joseph-li343)
+- **2026-03-18** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🎨 **[`paper-illustration`](skills/paper-illustration/SKILL.md)** — AI-generated publication-quality architecture diagrams and method figures via a PaperBanana-derived runtime. Integrated into Workflow 3 (`illustration: ai`; browser-first with a dedicated Gemini web profile, API as explicit fallback). Community contribution by [@Joseph-li343](https://github.com/Joseph-li343)
   <details><summary>Preview demo</summary><br><img src="assets/paper_illustration_demo.png" width="600" alt="paper-illustration demo" /></details>
 - **2026-03-18** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📊 **[CitationClaw](https://github.com/VisionXLab/CitationClaw)** — citation impact analysis: paper title → citation crawling, scholar identification, tiered analysis, HTML dashboard
 - **2026-03-17** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🔧 **Git code sync** — `/run-experiment` now supports `code_sync: git` (`git push` → `ssh "git pull"`) as alternative to rsync. **[NARRATIVE_REPORT example](templates/NARRATIVE_REPORT_TEMPLATE.md)** for Workflow 3. **Parameter pass-through** — set any downstream parameter at any level with `— key: value` ([details](#%EF%B8%8F-customization)). 🆓 **[ModelScope guide](docs/MODELSCOPE_GUIDE.md)** — free (2000 calls/day), one key, no automation restrictions ([Alt E](#-alternative-model-combinations))
@@ -78,7 +78,7 @@ claude
 > /idea-discovery "your research direction"  # Workflow 1 — be specific! not "NLP" but "factorized gap in discrete diffusion LMs"
 > /experiment-bridge                         # Workflow 1.5 — have a plan? implement + deploy + collect results
 > /auto-review-loop "your paper topic or scope"  # Workflow 2: review → fix → re-review overnight
-> /paper-writing "NARRATIVE_REPORT.md"       # Workflow 3: narrative → polished PDF
+> /paper-writing "NARRATIVE_REPORT.md"       # Workflow 3: narrative (or synthesized handoff) → polished PDF
 > /research-pipeline "your research direction"  # Full pipeline: Workflow 1 → 1.5 → 2 → 3 end-to-end
 ```
 
@@ -100,7 +100,8 @@ claude
 > | `workload profile` | `mixed` | Hint whether the run is `training`, `inference`, or `mixed` so backend recommendations stay semantically valid |
 > | `light profile` | `true` | Request a short hotspot / memory sample during sanity runs when the stack supports it cleanly |
 > | `wandb` | `false` | Auto-add W&B logging to experiment scripts. Set `true` + configure `wandb_project` in CLAUDE.md. `/monitor-experiment` pulls training curves from W&B |
-> | `illustration` | `gemini` | AI illustration in Workflow 3: `gemini` (default, needs `GEMINI_API_KEY`), `mermaid` (free), or `false` (skip) |
+> | `illustration` | `ai` | AI illustration in Workflow 3: `ai` (default, PaperBanana-derived runtime with browser-first Gemini web rendering), `mermaid` (free), or `false` (skip) |
+> | `illustration backend` | `browser` | Backend for `illustration: ai`: `browser` (default, dedicated Gemini web profile) or `api` (explicit fallback) |
 > | `venue` | `ICLR` | Target venue: `ICLR`, `NeurIPS`, `ICML`, `CVPR`, `ACL`, `AAAI`, `ACM`. Determines LaTeX style file and page limit |
 > | `base repo` | `false` | GitHub repo URL to clone as base codebase (e.g., `— base repo: https://github.com/org/project`). No code? Build on top of an open-source project |
 >
@@ -223,7 +224,7 @@ Domain-specific skills and external projects contributed by the community. PRs w
 | 🐾 [OpenClaw Adaptation Guide](docs/OPENCLAW_ADAPTATION.md) | General | Use ARIS workflow methodology in [OpenClaw](https://github.com/All-Hands-AI/OpenHands) — skill-to-stage mapping, file-based orchestration, no Claude Code CLI needed |
 | 🖱️ [Cursor Adaptation Guide](docs/CURSOR_ADAPTATION.md) | General | Use ARIS skills in [Cursor](https://www.cursor.com/) — `@`-reference skills, MCP setup, workflow mapping, state file recovery across sessions |
 | 🖥️ [Trae Adaptation Guide](docs/TRAE_ARIS_RUNBOOK_EN.md) | General | Use ARIS skills in [Trae](https://www.trae.ai/) (ByteDance AI IDE) — EN + CN guides |
-| 🎨 [`paper-illustration`](skills/paper-illustration/SKILL.md) | General | AI-generated architecture diagrams via Gemini. Built on [PaperBanana](https://github.com/dwzhu-pku/PaperBanana). Integrated into Workflow 3 |
+| 🎨 [`paper-illustration`](skills/paper-illustration/SKILL.md) | General | AI-generated architecture diagrams and method figures via a PaperBanana-derived runtime. Integrated into Workflow 3 |
 | 🤖 [`skills-codex`](skills/skills-codex/) | General | Full ARIS skill set mirrored for Codex CLI, including `experiment-bridge`, `grant-proposal`, and `paper-illustration` |
 | 🎛️ [auto-hparam-tuning](https://github.com/zxh0916/auto-hparam-tuning) | General | Automatic hyperparameter tuning — AI agent reads project, plans strategy, runs experiments, analyzes TensorBoard, learns from results. Hydra-based |
 | 🔁 [Codex+Claude Review Bridge](docs/CODEX_CLAUDE_REVIEW_GUIDE.md) | General | Codex executes + Claude reviews via local `claude-review` MCP bridge with async polling |
@@ -317,7 +318,7 @@ The output is a ranked `IDEA_REPORT.md` plus a refined proposal (`refine-logs/FI
 │   5. /research-review "top idea" (critical feedback)             │
 │   6. /research-refine "top idea" (problem anchor + method)       │
 │   7. /experiment-plan (claim-driven roadmap)                     │
-│   8. /run-experiment → /auto-review-loop                         │
+│   8. /experiment-bridge → /auto-review-loop → /paper-writing     │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -435,60 +436,54 @@ Already have an experiment plan (from Workflow 1 or your own)? `/experiment-brid
 > **"Turn my research narrative into a submission-ready PDF."** Requires a local LaTeX environment — see [Prerequisites](#prerequisites).
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                   Paper Writing Pipeline                      │
-│                                                               │
-│   /paper-plan      /paper-figure     /paper-write             │
-│   (outline)        (plots & tables)  (LaTeX draft)            │
-│        │                │                 │                   │
-│        ▼                ▼                 ▼                   │
-│   ┌──────────┐    ┌──────────┐     ┌──────────┐              │
-│   │ Claims-  │───▶│ Generate │────▶│ Section  │──┐           │
-│   │ Evidence │    │ figures, │     │ by       │  │           │
-│   │ Matrix + │    │ tables,  │     │ section  │  │           │
-│   │ Section  │    │ LaTeX    │     │ LaTeX    │  │           │
-│   │ Plan     │    │ includes │     │ draft    │  │           │
-│   └──────────┘    └──────────┘     └──────────┘  │           │
-│        │                                          │           │
-│        │         /paper-compile                   │           │
-│        │         (build PDF)                      │           │
-│        │              │                           │           │
-│        ▼              ▼                           ▼           │
-│   ┌──────────────────────────────────────────────────┐       │
-│   │ NARRATIVE_REPORT.md ──► PAPER_PLAN.md ──► paper/ │       │
-│   │    (input)             (outline)      (LaTeX+PDF)│       │
-│   └──────────────────────────────────────────────────┘       │
-│                                                               │
-│   Typical flow:                                               │
-│   1. Write NARRATIVE_REPORT.md (from Workflow 2 results)      │
-│   2. /paper-plan (claims-evidence matrix + section plan)      │
-│   3. /paper-figure (comparison tables, training curves, etc.) │
-│   4. /paper-write (section-by-section LaTeX generation)       │
-│   5. /paper-compile (build PDF, fix errors, page check)       │
-│   6. /auto-paper-improvement-loop (review ×2 + format check)  │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                    Paper Writing Pipeline                         │
+│                                                                    │
+│  Workflow 2 artifacts                                              │
+│  (AUTO_REVIEW / proposal / results / runtime)                      │
+│                │                                                   │
+│                ▼                                                   │
+│        narrative synthesis                                         │
+│                │                                                   │
+│                ▼                                                   │
+│   NARRATIVE_REPORT.md ──► /paper-plan ──► /paper-figure            │
+│                │                    │                │             │
+│                │                    └──────┬─────────┘             │
+│                │                           ▼                       │
+│                │                 /paper-illustration               │
+│                │                 (hero / method / architecture)    │
+│                │                           │                       │
+│                └──────────────► /paper-write ◄─────────────────────┘
+│                                         │                          │
+│                                         ▼                          │
+│                                  /paper-compile                    │
+│                                         │                          │
+│                                         ▼                          │
+│                          /auto-paper-improvement-loop              │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
-**Skills involved:** `paper-plan` + `paper-figure` + `paper-write` + `paper-compile` + `auto-paper-improvement-loop` + (post-acceptance) `paper-poster` + `paper-slides`
+**Skills involved:** `paper-plan` + `paper-figure` + `paper-illustration` + `paper-write` + `paper-compile` + `auto-paper-improvement-loop` + (post-acceptance) `paper-poster` + `paper-slides`
 
-> **One-command shortcut:** `/paper-writing "NARRATIVE_REPORT.md"` runs this entire workflow automatically.
+> **One-command shortcut:** `/paper-writing "NARRATIVE_REPORT.md"` runs this entire workflow automatically. If `NARRATIVE_REPORT.md` is missing but Workflow 1.5 / 2 artifacts exist, the pipeline synthesizes it first.
 
-**Input:** A `NARRATIVE_REPORT.md` describing the research: claims, experiments, results, figures. The more detailed the narrative (especially figure descriptions and quantitative results), the better the output. See [`templates/NARRATIVE_REPORT_TEMPLATE.md`](templates/NARRATIVE_REPORT_TEMPLATE.md) for a complete example.
+**Input:** A `NARRATIVE_REPORT.md` describing the research: claims, experiments, results, figures. If that file is missing, `paper-writing` synthesizes a draft from `AUTO_REVIEW.md`, proposal/experiment artifacts, and `EXPERIMENT_RUNTIME.json`. The more detailed the narrative (especially figure descriptions and quantitative results), the better the output. See [`templates/NARRATIVE_REPORT_TEMPLATE.md`](templates/NARRATIVE_REPORT_TEMPLATE.md) for a complete example.
 
 **Output:** A submission-ready `paper/` directory with LaTeX source, clean `.bib` (only cited entries), and compiled PDF.
 
 **Key features:**
 - 📐 **Claims-Evidence Matrix** — every claim maps to evidence, every experiment supports a claim
 - 📊 **Auto figure generation** — line plots, bar charts, comparison tables from JSON data
+- 🎨 **AI illustration runtime** — hero/method/architecture figures go through the PaperBanana-derived multi-stage pipeline and emit `figures/illustration_manifest.json`
 - 🧹 **Clean bib** — automated filtering removes uncited entries (948→215 lines in testing). Real BibTeX from [DBLP](https://dblp.org)/[CrossRef](https://www.crossref.org) instead of LLM-generated entries
 - 📄 **Flexible sections** — 5-8 sections depending on paper type (theory papers often need 7)
 - 🔍 **GPT-5.4 review** — each step optionally reviewed by external LLM
 - ✂️ **De-AI polish** — removes AI writing patterns (delve, pivotal, landscape...)
 - 🎯 **Page verification** — `pdftotext`-based precise check that main body fits page limit
 
-> ⚠️ **Figure generation scope:** `/paper-figure` auto-generates **data-driven plots** (training curves, bar charts, heatmaps) and **comparison tables** from JSON/CSV. For **architecture diagrams and method figures**: `illustration: gemini` (default) uses Claude→Gemini→Nano Banana Pro for publication-quality diagrams; `illustration: mermaid` generates Mermaid diagrams for free; `illustration: false` skips AI figures entirely.
+> ⚠️ **Figure generation scope:** `/paper-figure` auto-generates **data-driven plots** (training curves, bar charts, heatmaps) and **comparison tables** from JSON/CSV. For **hero figures, architecture diagrams, and method figures**: `illustration: ai` (default) runs the PaperBanana-derived CLI and writes `figures/ai_generated/*`, `figures/illustration_manifest.json`, and updated `figures/latex_includes.tex`; `illustration: mermaid` generates Mermaid diagrams for free; `illustration: false` skips AI figures entirely. `manual_blocker` is reserved for true external assets; browser/API runtime failures are recorded as `backend_blocker`.
 >
-> **Gemini API setup** (for `illustration: gemini`): Get your API key at [Google AI Studio](https://aistudio.google.com/apikey), then set it as an environment variable: `export GEMINI_API_KEY="your-key"`. Or add to your shell profile (`~/.zshrc` / `~/.bashrc`). No other dependencies needed.
+> **AI illustration backend setup** (for `illustration: ai`): default path is browser-first and now auto-bootstrapped. First run of Workflow 3 or `paper_illustration_cli.py` creates `.venv`, installs Playwright, installs Chromium, and writes `refine-logs/PAPER_RUNTIME_STATE.json`. The only remaining manual step is the dedicated Gemini login. Manual fallback if bootstrap is disabled or fails: `python3 -m pip install -r mcp-servers/gemini-browser/requirements.txt` and `python3 -m playwright install chromium`. Optional Claude Code plugin: `claude mcp add gemini-browser -s user -- python3 /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/gemini-browser/server.py`. Set `ILLUSTRATION_BACKEND=api` only if you want the old API-backed path, then configure `PAPER_ILLUSTRATION_API_KEY` or `GEMINI_API_KEY`. Optional references can be passed through `--reference-dir`; if none exist, the runtime falls back to a no-retrieval mode.
 
 **Tested end-to-end:** Generated a 9-page ICLR 2026 theory paper (7 sections, 29 citations, 4 figures, 2 comparison tables) from a single NARRATIVE_REPORT.md — zero compilation errors, zero undefined references.
 
@@ -593,7 +588,7 @@ After Workflow 3 generates the paper, `/auto-paper-improvement-loop` runs 2 roun
 | 📝 **[`paper-writing`](skills/paper-writing/SKILL.md)** | **Pipeline orchestrator** — runs all skills below in sequence | Yes |
 | ├ 📐 [`paper-plan`](skills/paper-plan/SKILL.md) | Claims-evidence matrix, section structure, figure plan, citation scaffolding | Yes |
 | ├ 📊 [`paper-figure`](skills/paper-figure/SKILL.md) | Publication-quality matplotlib/seaborn plots + LaTeX comparison tables | Optional |
-| ├ 🎨 [`paper-illustration`](skills/paper-illustration/SKILL.md) | AI-generated architecture diagrams and method figures via Gemini (when `illustration: true`) | No (needs Gemini API) |
+| ├ 🎨 [`paper-illustration`](skills/paper-illustration/SKILL.md) | PaperBanana-derived AI runtime for hero figures, architecture diagrams, and method figures (when `illustration: ai`) | No (needs dedicated browser login, or API key for fallback) |
 | ├ ✍️ [`paper-write`](skills/paper-write/SKILL.md) | Section-by-section LaTeX generation (ICLR/NeurIPS/ICML). Anti-hallucination BibTeX via DBLP/CrossRef | Yes |
 | ├ 🔨 [`paper-compile`](skills/paper-compile/SKILL.md) | Compile LaTeX to PDF, auto-fix errors, submission readiness checks | No |
 | └ 🔄 [`auto-paper-improvement-loop`](skills/auto-paper-improvement-loop/SKILL.md) | 2-round content review + format check (4/10 → 8.5/10) | Yes |
@@ -618,19 +613,23 @@ After Workflow 3 generates the paper, `/auto-paper-improvement-loop` runs 2 roun
    npm install -g @openai/codex
    claude mcp add codex -s user -- codex mcp-server
    ```
-3. (For Workflow 3: paper writing) **LaTeX** environment with `latexmk` and `pdfinfo`:
+3. (For Workflow 3: paper writing) **LaTeX / plotting / browser runtime**:
    ```bash
-   # macOS
-   brew install --cask mactex    # or: brew install basictex
-   brew install poppler          # provides pdfinfo
+   # Default: first Workflow 3 run bootstraps this automatically
+   python3 tools/ensure_paper_runtime.py --phase workflow3
 
-   # Ubuntu/Debian
-   sudo apt install texlive-full latexmk poppler-utils
+   # Manual fallback if automatic bootstrap is disabled or unsupported:
+   # macOS
+   brew install --cask mactex-no-gui
+   brew install poppler curl
+
+   # Ubuntu/Debian/WSL
+   sudo apt install python3-venv texlive-full latexmk poppler-utils curl
 
    # Verify
-   latexmk --version && pdfinfo -v
+   latexmk --version && pdfinfo -v && pdftotext -v
    ```
-   > If you only need Workflow 1 & 2 (idea discovery + auto review), LaTeX is not required.
+   > If you only need Workflow 1 & 2 (idea discovery + auto review), Workflow 3 bootstrap is not required.
 
 ### Install Skills
 
@@ -1051,7 +1050,11 @@ Skills are plain Markdown files. Fork and customize:
 | `WORKLOAD_PROFILE` | `mixed` | Hint whether the run is training-heavy, inference-heavy, or mixed | → `experiment-bridge` |
 | `LIGHT_PROFILE` | true | Request a short hotspot / memory sample during sanity when supported | → `experiment-bridge` → `run-experiment` |
 | `BASE_REPO` | false | GitHub repo URL to clone as base codebase for experiments | → `experiment-bridge` |
-| `ILLUSTRATION` | `gemini` | AI illustration: `gemini` (default), `mermaid` (free), or `false` (skip) | → `paper-writing` |
+| `ILLUSTRATION` | `ai` | AI illustration: `ai` (default, PaperBanana-derived runtime with browser-first Gemini web rendering), `mermaid` (free), or `false` (skip) | → `paper-writing` |
+| `ILLUSTRATION_BACKEND` | `browser` | Illustration backend: `browser` (default, dedicated Gemini web profile) or `api` (explicit fallback requiring API credentials) | → `paper-writing` → `paper-illustration` |
+| `PAPER_AUTO_INSTALL` | true | Auto-bootstrap Workflow 3 dependencies on first run | → `paper-writing` |
+| `PAPER_VENV_DIR` | `.venv` | Project-local virtualenv used by Workflow 3 tooling | → `paper-writing` |
+| `PAPER_SYSTEM_INSTALL` | `auto` | Auto-install supported system packages via `apt-get` or `brew` | → `paper-writing` → `paper-compile` |
 
 Override inline: `/research-pipeline "topic" — auto proceed: false, illustration: mermaid`
 
@@ -1116,7 +1119,11 @@ Override inline: `/research-lit "topic" — sources: zotero, web`, `/research-li
 | `TARGET_VENUE` | `ICLR` | Target venue: `ICLR`, `NeurIPS`, `ICML`, `CVPR`, `ACL`, `AAAI`, `ACM` |
 | `ANONYMOUS` | true | Use anonymous author block for blind review |
 | `MAX_PAGES` | 9 | Main body page limit (excluding references) |
-| `ILLUSTRATION` | `gemini` | AI illustration mode: `gemini` (default, needs `GEMINI_API_KEY`), `mermaid` (free), or `false` (skip) |
+| `ILLUSTRATION` | `ai` | AI illustration mode: `ai` (default, browser-first Gemini web rendering), `mermaid` (free), or `false` (skip) |
+| `ILLUSTRATION_BACKEND` | `browser` | Backend choice for `illustration: ai`: `browser` (default) or `api` (explicit fallback) |
+| `PAPER_AUTO_INSTALL` | true | Auto-bootstrap Workflow 3 dependencies before figure / write / compile steps |
+| `PAPER_VENV_DIR` | `.venv` | Project-local virtualenv for Workflow 3 Python tooling |
+| `PAPER_SYSTEM_INSTALL` | `auto` | Install supported system packages automatically when Workflow 3 needs them |
 
 Override inline: `/paper-write — target venue: NeurIPS, illustration: mermaid`
 

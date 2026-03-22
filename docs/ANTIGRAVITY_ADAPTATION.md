@@ -272,11 +272,11 @@ For the full pipeline (`/research-pipeline`), leverage Antigravity's **multi-age
 | 1 | Idea Discovery: `skills/idea-discovery/SKILL.md` + your direction | `IDEA_REPORT.md`, `refine-logs/FINAL_PROPOSAL.md`, `refine-logs/EXPERIMENT_PLAN.md` |
 | 2 | Experiment Bridge: `skills/experiment-bridge/SKILL.md` | Experiment scripts, results |
 | 3 | Auto Review Loop: `skills/auto-review-loop/SKILL.md` | `AUTO_REVIEW.md` |
-| 4 | Paper Writing: `skills/paper-writing/SKILL.md` + `NARRATIVE_REPORT.md` | `paper/` directory |
+| 4 | Paper Writing: `skills/paper-writing/SKILL.md` + `NARRATIVE_REPORT.md` (optional if Workflow 2 artifacts already exist) | `paper/` directory |
 
 Each stage reads the previous stage's output files, so context carries forward across agent sessions.
 
-> **Note:** Stage 4 expects a `NARRATIVE_REPORT.md` — see [NARRATIVE_REPORT_EXAMPLE.md](NARRATIVE_REPORT_EXAMPLE.md) for the expected format.
+> **Note:** Stage 4 works best with a `NARRATIVE_REPORT.md`, but the updated `paper-writing` pipeline can synthesize it from `AUTO_REVIEW.md`, proposal/experiment artifacts, and runtime evidence if the file is missing — see [NARRATIVE_REPORT_EXAMPLE.md](NARRATIVE_REPORT_EXAMPLE.md) for the target structure.
 
 ## 6. MCP Tool Calls
 

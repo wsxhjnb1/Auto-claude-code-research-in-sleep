@@ -78,6 +78,12 @@ paper/
 
 ### Step 0: Backup and Clean
 
+Bootstrap the write-time runtime first:
+
+```bash
+python3 tools/ensure_paper_runtime.py --phase write
+```
+
 If `paper/` already exists, back up to `paper-backup-{timestamp}/` before overwriting. Never silently destroy existing work.
 
 **CRITICAL: Clean stale files.** When changing section structure (e.g., 5 sections → 7 sections), delete section files that are no longer referenced by `main.tex`. Stale files (e.g., old `5_conclusion.tex` left behind when conclusion moved to `7_conclusion.tex`) cause confusion and waste space.
@@ -333,4 +339,3 @@ De-AI patterns from [kgraph57/paper-writer-skill](https://github.com/kgraph57/pa
 ## Acknowledgements
 
 Writing methodology adapted from [Research-Paper-Writing-Skills](https://github.com/Master-cai/Research-Paper-Writing-Skills) (CCF award-winning methodology). Citation verification from [claude-scholar](https://github.com/Galaxy-Dawn/claude-scholar) and [Imbad0202/academic-research-skills](https://github.com/Imbad0202/academic-research-skills). De-AI polish from [kgraph57/paper-writer-skill](https://github.com/kgraph57/paper-writer-skill). Backup mechanism from [baoyu-skills](https://github.com/jimliu/baoyu-skills).
-

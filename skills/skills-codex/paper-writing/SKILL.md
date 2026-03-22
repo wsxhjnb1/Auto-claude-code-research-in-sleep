@@ -1,6 +1,6 @@
 ---
 name: "paper-writing"
-description: "Workflow 3: Full paper writing pipeline. Orchestrates paper-plan \u2192 paper-figure \u2192 paper-write \u2192 paper-compile \u2192 auto-paper-improvement-loop to go from a narrative report to a polished, submission-ready PDF. Use when user says \\\"\u5199\u8bba\u6587\u5168\u6d41\u7a0b\\\", \\\"write paper pipeline\\\", \\\"\u4ece\u62a5\u544a\u5230PDF\\\", \\\"paper writing\\\", or wants the complete paper generation workflow."
+description: "Workflow 3: Full paper writing pipeline. Orchestrates narrative synthesis → paper-plan → paper-figure → paper-illustration → paper-write → paper-compile → auto-paper-improvement-loop to go from research artifacts to a polished, submission-ready PDF."
 ---
 
 # Workflow 3: Paper Writing Pipeline
@@ -9,279 +9,147 @@ Orchestrate a complete paper writing workflow for: **$ARGUMENTS**
 
 ## Overview
 
-This skill chains five sub-skills into a single automated pipeline:
+This workflow is now an artifact-driven chain:
 
 ```
-/paper-plan → /paper-figure → /paper-write → /paper-compile → /auto-paper-improvement-loop
-  (outline)     (plots)        (LaTeX)        (build PDF)       (review & polish ×2)
+narrative synthesis → /paper-plan → /paper-figure → /paper-illustration → /paper-write → /paper-compile → /auto-paper-improvement-loop
 ```
 
-Each phase builds on the previous one's output. The final deliverable is a polished, reviewed `paper/` directory with LaTeX source and compiled PDF.
+If `NARRATIVE_REPORT.md` is missing but Workflow 2 artifacts exist, synthesize it first instead of treating it as a purely manual prerequisite.
 
 ## Constants
 
-- **VENUE = `ICLR`** — Target venue. Options: `ICLR`, `NeurIPS`, `ICML`. Affects style file, page limit, citation format.
-- **MAX_IMPROVEMENT_ROUNDS = 2** — Number of review→fix→recompile rounds in the improvement loop.
-- **REVIEWER_MODEL = `gpt-5.4`** — Model used via a secondary Codex agent for plan review, figure review, writing review, and improvement loop.
-- **AUTO_PROCEED = true** — Auto-continue between phases. Set `false` to pause and wait for user approval after each phase.
-- **HUMAN_CHECKPOINT = false** — When `true`, the improvement loop (Phase 5) pauses after each round's review to let you see the score and provide custom modification instructions. When `false` (default), the loop runs fully autonomously. Passed through to `/auto-paper-improvement-loop`.
+- **VENUE = `ICLR`** — Target venue. Options: `ICLR`, `NeurIPS`, `ICML`, `CVPR`, `ACL`, `AAAI`, `ACM`.
+- **ILLUSTRATION = `ai`** — `ai`, `mermaid`, or `false`
+- **PAPER_AUTO_INSTALL = true**
+- **PAPER_VENV_DIR = `.venv`**
+- **PAPER_SYSTEM_INSTALL = `auto`**
+- **MAX_IMPROVEMENT_ROUNDS = 2**
+- **AUTO_PROCEED = true**
+- **HUMAN_CHECKPOINT = false**
 
-> Override inline: `/paper-writing "NARRATIVE_REPORT.md" — venue: NeurIPS, human checkpoint: true`
+> Override inline: `/paper-writing "topic" — venue: NeurIPS, illustration: mermaid`
 
 ## Inputs
 
-This pipeline accepts one of:
+This workflow can start from:
 
-1. **`NARRATIVE_REPORT.md`** (best) — structured research narrative with claims, experiments, results, figures
-2. **Research direction + experiment results** — the skill will help draft the narrative first
-3. **Existing `PAPER_PLAN.md`** — skip Phase 1, start from Phase 2
-
-The more detailed the input (especially figure descriptions and quantitative results), the better the output.
+1. `NARRATIVE_REPORT.md`
+2. Workflow 2 artifacts (`AUTO_REVIEW.md`, experiment results, proposal, runtime evidence)
+3. existing `PAPER_PLAN.md`
 
 ## Pipeline
 
+### Phase -1: Runtime Bootstrap
+
+```bash
+python3 tools/ensure_paper_runtime.py --phase workflow3
+```
+
+This creates/reuses `.venv`, installs Python deps, Playwright/Chromium, and supported system packages, then records the result in `refine-logs/PAPER_RUNTIME_STATE.json`.
+
+### Phase 0: Narrative Synthesis
+
+If `NARRATIVE_REPORT.md` is missing, synthesize it:
+
+```bash
+python3 tools/synthesize_narrative_report.py \
+  --proposal refine-logs/FINAL_PROPOSAL.md \
+  --plan refine-logs/EXPERIMENT_PLAN.md \
+  --results refine-logs/EXPERIMENT_RESULTS.md \
+  --runtime refine-logs/EXPERIMENT_RUNTIME.json \
+  --review AUTO_REVIEW.md \
+  --output NARRATIVE_REPORT.md
+```
+
 ### Phase 1: Paper Plan
 
-Invoke `/paper-plan` to create the structural outline:
-
-```
+```text
 /paper-plan "$ARGUMENTS"
 ```
 
-**What this does:**
-- Parse NARRATIVE_REPORT.md for claims, evidence, and figure descriptions
-- Build a **Claims-Evidence Matrix** — every claim maps to evidence, every experiment supports a claim
-- Design section structure (5-8 sections depending on paper type)
-- Plan figure/table placement with data sources
-- Scaffold citation structure
-- GPT-5.4 reviews the plan for completeness
+Output:
 
-**Output:** `PAPER_PLAN.md` with section plan, figure plan, citation scaffolding.
+- `PAPER_PLAN.md`
 
-**Checkpoint:** Present the plan summary to the user.
+### Phase 2: Data Figures and Tables
 
-```
-📐 Paper plan complete:
-- Title: [proposed title]
-- Sections: [N] ([list])
-- Figures: [N] auto-generated + [M] manual
-- Target: [VENUE], [PAGE_LIMIT] pages
-
-Shall I proceed with figure generation?
-```
-
-- **User approves** (or AUTO_PROCEED=true) → proceed to Phase 2.
-- **User requests changes** → adjust plan and re-present.
-
-### Phase 2: Figure Generation
-
-Invoke `/paper-figure` to generate data-driven plots and tables:
-
-```
+```text
 /paper-figure "PAPER_PLAN.md"
 ```
 
-**What this does:**
-- Read figure plan from PAPER_PLAN.md
-- Generate matplotlib/seaborn plots from JSON/CSV data
-- Generate LaTeX comparison tables
-- Create `figures/latex_includes.tex` for easy insertion
-- GPT-5.4 reviews figure quality and captions
+Output:
 
-**Output:** `figures/` directory with PDFs, generation scripts, and LaTeX snippets.
+- data-driven figures/tables
+- `figures/latex_includes.tex`
 
-#### Phase 2b: AI Illustration Generation (when `illustration: true`)
+### Phase 2b: AI Illustration Generation
 
-**Skip this step entirely if `illustration` is not set or is `false`.**
+If `ILLUSTRATION = ai`, run:
 
-If the paper plan includes architecture diagrams, pipeline figures, or method illustrations, invoke `/paper-illustration`:
-
+```bash
+python3 tools/paper_illustration_cli.py \
+  --paper-plan PAPER_PLAN.md \
+  --narrative-report NARRATIVE_REPORT.md \
+  --auto-review AUTO_REVIEW.md \
+  --manifest figures/illustration_manifest.json \
+  --latex-includes figures/latex_includes.tex
 ```
-/paper-illustration "[method description from PAPER_PLAN.md or NARRATIVE_REPORT.md]"
-```
 
-**What this does:**
-- Codex plans the layout → Gemini optimizes → Nano Banana Pro renders → Codex reviews (score ≥ 9)
-- Output: `figures/ai_generated/*.png` — publication-quality method diagrams
-- Requires `GEMINI_API_KEY` environment variable
+Default backend behavior:
 
-> **Without `illustration: true`:** Architecture diagrams must still be created manually (draw.io, Figma, TikZ) and placed in `figures/` before proceeding — same as before.
+- `ILLUSTRATION_BACKEND=browser` is primary and reuses the dedicated Gemini web profile.
+- `ILLUSTRATION_BACKEND=api` is explicit fallback.
+- Browser automation failures are reported through `backend_blocker`.
+- First run is auto-bootstrapped; only the dedicated Gemini login stays manual.
 
-**Checkpoint:** List generated vs manual figures.
+If `ILLUSTRATION = mermaid`, use `/mermaid-diagram`.
 
-```
-📊 Figures complete:
-- Data plots (auto): [list]
-- AI illustrations (auto): [list, if illustration: true]
-- Manual (need your input): [list]
-- LaTeX snippets: figures/latex_includes.tex
+If `ILLUSTRATION = false`, skip AI illustration.
 
-[If manual figures needed]: Please add them to figures/ before I proceed.
-[If all auto]: Shall I proceed with LaTeX writing?
-```
+Expected outputs:
+
+- `figures/ai_generated/*.png`
+- `figures/illustration_manifest.json`
+- updated `figures/latex_includes.tex`
+
+Only mark a figure as `manual_blocker` when it depends on external qualitative assets, screenshots, real photos, or other user-provided media. Browser/API runtime failures stay `backend_blocker`.
 
 ### Phase 3: LaTeX Writing
 
-Invoke `/paper-write` to generate section-by-section LaTeX:
-
-```
+```text
 /paper-write "PAPER_PLAN.md"
 ```
 
-**What this does:**
-- Write each section following the plan, with proper LaTeX formatting
-- Insert figure/table references from `figures/latex_includes.tex`
-- Build `references.bib` from citation scaffolding
-- Clean stale files from previous section structures
-- Automated bib cleaning (remove uncited entries)
-- De-AI polish (remove "delve", "pivotal", "landscape"...)
-- GPT-5.4 reviews each section for quality
+Consume:
 
-**Output:** `paper/` directory with `main.tex`, `sections/*.tex`, `references.bib`, `math_commands.tex`.
-
-**Checkpoint:** Report section completion.
-
-```
-✍️ LaTeX writing complete:
-- Sections: [N] written ([list])
-- Citations: [N] unique keys in references.bib
-- Stale files cleaned: [list, if any]
-
-Shall I proceed with compilation?
-```
+- `NARRATIVE_REPORT.md`
+- `PAPER_PLAN.md`
+- `figures/latex_includes.tex`
+- `figures/illustration_manifest.json` when present
 
 ### Phase 4: Compilation
 
-Invoke `/paper-compile` to build the PDF:
-
-```
+```text
 /paper-compile "paper/"
 ```
 
-**What this does:**
-- `latexmk -pdf` with automatic multi-pass compilation
-- Auto-fix common errors (missing packages, undefined refs, BibTeX syntax)
-- Up to 3 compilation attempts
-- Post-compilation checks: undefined refs, page count, font embedding
-- Precise page verification via `pdftotext`
-- Stale file detection
+Output:
 
-**Output:** `paper/main.pdf`
-
-**Checkpoint:** Report compilation results.
-
-```
-🔨 Compilation complete:
-- Status: SUCCESS
-- Pages: [X] (main body) + [Y] (references) + [Z] (appendix)
-- Within page limit: YES/NO
-- Undefined references: 0
-- Undefined citations: 0
-
-Shall I proceed with the improvement loop?
-```
+- `paper/main.pdf`
 
 ### Phase 5: Auto Improvement Loop
 
-Invoke `/auto-paper-improvement-loop` to polish the paper:
-
-```
+```text
 /auto-paper-improvement-loop "paper/"
-```
-
-**What this does (2 rounds):**
-
-**Round 1:** GPT-5.4 xhigh reviews the full paper → identifies CRITICAL/MAJOR/MINOR issues → Codex implements fixes → recompile → save `main_round1.pdf`
-
-**Round 2:** GPT-5.4 xhigh re-reviews with conversation context → identifies remaining issues → Codex implements fixes → recompile → save `main_round2.pdf`
-
-**Typical improvements:**
-- Fix assumption-model mismatches
-- Soften overclaims to match evidence
-- Add missing interpretations and notation
-- Strengthen limitations section
-- Add theory-aligned experiments if needed
-
-**Output:** Three PDFs for comparison + `PAPER_IMPROVEMENT_LOG.md`.
-
-**Format check** (included in improvement loop Step 8): After final recompilation, auto-detect and fix overfull hboxes (content exceeding margins), verify page count vs venue limit, and ensure compact formatting. Any overfull > 10pt is fixed before generating the final PDF.
-
-### Phase 6: Final Report
-
-```markdown
-# Paper Writing Pipeline Report
-
-**Input**: [NARRATIVE_REPORT.md or topic]
-**Venue**: [ICLR/NeurIPS/ICML]
-**Date**: [today]
-
-## Pipeline Summary
-
-| Phase | Status | Output |
-|-------|--------|--------|
-| 1. Paper Plan | ✅ | PAPER_PLAN.md |
-| 2. Figures | ✅ | figures/ ([N] auto + [M] manual) |
-| 3. LaTeX Writing | ✅ | paper/sections/*.tex ([N] sections, [M] citations) |
-| 4. Compilation | ✅ | paper/main.pdf ([X] pages) |
-| 5. Improvement | ✅ | [score0]/10 → [score2]/10 |
-
-## Improvement Scores
-| Round | Score | Key Changes |
-|-------|-------|-------------|
-| Round 0 | X/10 | Baseline |
-| Round 1 | Y/10 | [summary] |
-| Round 2 | Z/10 | [summary] |
-
-## Deliverables
-- paper/main.pdf — Final polished paper
-- paper/main_round0_original.pdf — Before improvement
-- paper/main_round1.pdf — After round 1
-- paper/main_round2.pdf — After round 2
-- paper/PAPER_IMPROVEMENT_LOG.md — Full review log
-
-## Remaining Issues (if any)
-- [items from final review that weren't addressed]
-
-## Next Steps
-- [ ] Visual inspection of PDF
-- [ ] Add any missing manual figures
-- [ ] Submit to [venue] via OpenReview / CMT / HotCRP
 ```
 
 ## Key Rules
 
-- **Large file handling**: If the Write tool fails due to file size, immediately retry using Bash (`cat << 'EOF' > file`) to write in chunks. Do NOT ask the user for permission — just do it silently.
-
-- **Don't skip phases.** Each phase builds on the previous one — skipping leads to errors.
-- **Checkpoint between phases** when AUTO_PROCEED=false. Present results and wait for approval.
-- **Manual figures first.** If the paper needs architecture diagrams or qualitative results, the user must provide them before Phase 3.
-- **Compilation must succeed** before entering the improvement loop. Fix all errors first.
-- **Preserve all PDFs.** The user needs round0/round1/round2 for comparison.
-- **Document everything.** The pipeline report should be self-contained.
-- **Respect page limits.** If the paper exceeds the venue limit, suggest specific cuts before the improvement loop.
-
-## Composing with Other Workflows
-
-```
-/idea-discovery "direction"         ← Workflow 1: find ideas
-implement                           ← write code
-/run-experiment                     ← deploy experiments
-/auto-review-loop "paper topic"     ← Workflow 2: iterate research
-/paper-writing "NARRATIVE_REPORT.md"  ← Workflow 3: you are here
-                                         submit! 🎉
-
-Or use /research-pipeline for the Workflow 1+2 end-to-end flow,
-then /paper-writing for the final writing step.
-```
-
-## Typical Timeline
-
-| Phase | Duration | Can sleep? |
-|-------|----------|------------|
-| 1. Paper Plan | 5-10 min | No |
-| 2. Figures | 5-15 min | No |
-| 3. LaTeX Writing | 15-30 min | Yes ✅ |
-| 4. Compilation | 2-5 min | No |
-| 5. Improvement | 15-30 min | Yes ✅ |
-
-**Total: ~45-90 min** for a full paper from narrative report to polished PDF.
+- `AUTO_REVIEW.md` is the canonical Workflow 2 review artifact.
+- Keep the public interface model-agnostic: `illustration: ai`.
+- Default to the browser-backed path and only use API when explicitly requested.
+- Bootstrap Workflow 3 before substeps or rely on the self-bootstrapping runtime scripts.
+- Use the real runtime scripts instead of pseudo-implementations inside skills.
+- Try AI illustration before manual fallback for hero and architecture figures.
+- Only external assets should block the flow.

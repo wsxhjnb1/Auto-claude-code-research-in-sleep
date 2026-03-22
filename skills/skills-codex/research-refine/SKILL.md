@@ -582,7 +582,7 @@ If the final verdict is not READY, still write the best current final version he
 ...
 
 ## Next Steps
-- If READY: proceed to `/experiment-plan` for a full experiment roadmap, then `/run-experiment`
+- If READY: proceed to `/experiment-plan` for a full experiment roadmap, then `/experiment-bridge`
 - If REVISE: manually address the remaining mechanism weaknesses, then re-run `/research-refine`
 - If RETHINK: revisit the core mechanism, possibly with `/idea-creator`
 ```
@@ -647,7 +647,7 @@ This skill sits between idea discovery and execution:
 /idea-creator "direction"       -> candidate ideas
 /research-refine "PROBLEM: ... | APPROACH: ..."  <- you are here
 /experiment-plan                -> detailed experiment roadmap
-/run-experiment                 -> execute the chosen method
+/experiment-bridge              -> implement, sanity-check, and deploy the chosen method
 /auto-review-loop               -> iterate on results and paper
 ```
 
@@ -657,8 +657,7 @@ Typical flow:
 2. `/research-refine` turns that into an anchored, elegant, frontier-aware method plan
 3. `/experiment-plan` turns the final proposal into a detailed claim-driven experiment roadmap
 4. `/research-refine-pipeline` is the one-shot wrapper when the user wants both stages in a single request
-5. `/run-experiment` executes the chosen runs
+5. `/experiment-bridge` turns the plan into code, sanity checks, deployment, and tracked results
 6. Later loops operate on results, not just ideas
 
 This skill also works standalone if you already know the problem and just need the method to become concrete.
-

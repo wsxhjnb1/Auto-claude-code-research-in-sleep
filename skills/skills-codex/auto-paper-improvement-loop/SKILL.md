@@ -139,6 +139,7 @@ Parse the review and implement fixes by severity:
 ### Step 4: Recompile Round 1
 
 ```bash
+python3 tools/ensure_paper_runtime.py --phase compile
 cd paper && latexmk -C && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
 cp main.pdf main_round1.pdf
 ```
@@ -181,6 +182,7 @@ Same process as Step 3. Typical Round 2 fixes:
 ### Step 7: Recompile Round 2
 
 ```bash
+python3 tools/ensure_paper_runtime.py --phase compile
 cd paper && latexmk -C && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
 cp main.pdf main_round2.pdf
 ```
@@ -318,4 +320,3 @@ Based on end-to-end testing on a 9-page ICLR 2026 theory paper:
 | Round 3 | 5→8.5/10 (format) | Removed hero fig, appendix, compressed conclusion, fixed overfull hbox |
 
 **+4.5 points across 3 rounds** (2 content + 1 format) is typical for a well-structured but rough first draft. Final: 8 pages main body, 0 overfull hbox, ICLR-compliant.
-

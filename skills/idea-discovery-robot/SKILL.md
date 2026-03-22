@@ -349,7 +349,7 @@ After this workflow identifies a strong robotics idea:
 ```
 /idea-discovery-robot "direction"   ← you are here
 implement sim-first pilot
-/run-experiment                     ← if infrastructure exists
+/experiment-bridge                  ← if infrastructure exists
 /auto-review-loop "top robotics idea"
 ```
 
