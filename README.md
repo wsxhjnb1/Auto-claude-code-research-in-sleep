@@ -28,6 +28,7 @@ Custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skills for 
 
 ## 📢 What's New
 
+- **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ♻️ **Long-run auto-resume contract** — Workflow 1.5 now treats missing checkpoint / auto-resume support as a correctness blocker for any multi-step or ~10+ minute run. `EXPERIMENT_RUNTIME.json` records output/checkpoint/resume metadata so the next AI session can continue from the latest valid checkpoint
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ⚔️ **Experiment debate loop** — `/experiment-bridge` now defaults to a bounded dual-AI debate loop (`code review mode: debate`) with runtime-review re-entry, structured `EXPERIMENT_DEBATE_LOG.md`, and parseable `EXPERIMENT_RUNTIME.json`
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📋 **[Templates](templates/)** — input templates for every workflow. 📄 **7 venue templates** — CVPR, ACL, AAAI, ACM MM added. 🛡️ **Anti-hallucination fix** — Workflow 2 enforces DBLP → CrossRef → [VERIFY]. 🔗 **`base repo`** — clone a GitHub repo as base codebase (`— base repo: https://github.com/org/project`)
 - **2026-03-21** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🏆 **AAAI 2026 accepted — 7/10 with pure Codex CLI!** Built with ARIS-Codex skills by [@xinbo820-web](https://github.com/xinbo820-web). See [Community Showcase](#-community-showcase--papers-built-with-aris)
@@ -128,7 +129,7 @@ See [full setup guide](#%EF%B8%8F-setup) for details and [alternative model comb
 - 📝 **Paper writing** — narrative → outline → figures → LaTeX → PDF → auto-review (4/10 → 8.5/10), one command. Anti-hallucination citations via [DBLP](https://dblp.org)/[CrossRef](https://www.crossref.org)
 - 🤖 **Cross-model collaboration** — Claude Code executes, GPT-5.4 xhigh reviews. Adversarial, not self-play
 - 📝 **Peer review** — review others' papers as a conference reviewer, with structured scoring and meta-review
-- 🖥️ **Review-driven experiments** — `experiment-bridge` now runs a bounded executor-vs-reviewer debate before deployment, captures `EXPERIMENT_RUNTIME.json`, re-enters review on blocker-level runtime failures, and still folds successful runs back into the paper. Just configure your server in `CLAUDE.md` ([setup guide](#%EF%B8%8F-gpu-server-setup-for-auto-experiments))
+- 🖥️ **Review-driven experiments** — `experiment-bridge` now runs a bounded executor-vs-reviewer debate before deployment, captures `EXPERIMENT_RUNTIME.json`, re-enters review on blocker-level runtime failures, and treats missing checkpoint / auto-resume support as a correctness blocker for long runs. Just configure your server in `CLAUDE.md` ([setup guide](#%EF%B8%8F-gpu-server-setup-for-auto-experiments))
 - 🔀 **Flexible models** — default Claude × GPT-5.4, also supports [GLM, MiniMax, Kimi, LongCat, DeepSeek, etc.](#-alternative-model-combinations) — no Claude or OpenAI API required
 - 🛑 **Human-in-the-loop** — configurable checkpoints at key decisions. `AUTO_PROCEED=true` for full autopilot, `false` to approve each step
 - 📱 **[Feishu/Lark notifications](#-feishulark-integration-optional)** — three modes: **off (default, strongly recommended for most users)**, push-only (webhook, mobile alerts), interactive (approve/reject from Feishu). Zero impact when unconfigured
@@ -339,9 +340,9 @@ The output is a ranked `IDEA_REPORT.md` plus a refined proposal (`refine-logs/FI
 Already have an experiment plan (from Workflow 1 or your own)? `/experiment-bridge` turns it into running code:
 
 1. 📋 **Parse** the experiment plan (`refine-logs/EXPERIMENT_PLAN.md`)
-2. 💻 **Implement** experiment scripts (reuse existing code, add proper argparse/logging/seeds)
-3. ⚔️ **Dual-AI debate loop** — GPT-5.4 reviews correctness first, then optimization / stability (`code review mode: debate` by default)
-4. ✅ **Sanity + runtime review** — run the smallest experiment first, capture `EXPERIMENT_RUNTIME.json`, and re-enter review on OOM / NaN / malformed outputs / slowdown
+2. 💻 **Implement** experiment scripts (reuse existing code, add proper argparse/logging/seeds/checkpoints/auto-resume)
+3. ⚔️ **Dual-AI debate loop** — GPT-5.4 reviews correctness first, including long-run resumeability, then optimization / stability (`code review mode: debate` by default)
+4. ✅ **Sanity + runtime review** — run the smallest experiment first, capture `EXPERIMENT_RUNTIME.json` plus resume metadata, do a resume smoke test for long runs, and re-enter review on OOM / NaN / malformed outputs / slowdown
 5. 🚀 **Deploy** full experiment suite to GPU via `/run-experiment`
 6. 📊 **Collect** initial results plus runtime evidence and update the experiment tracker
 
@@ -376,7 +377,7 @@ Already have an experiment plan (from Workflow 1 or your own)? `/experiment-brid
 
 > 💡 **One-command shortcut:** `/experiment-bridge` reads `refine-logs/EXPERIMENT_PLAN.md` automatically. Or point it to any plan: `/experiment-bridge "my_plan.md"`.
 
-> ⚙️ `CODE_REVIEW`, `CODE_REVIEW_MODE`, `RUNTIME_REVIEW`, `OPTIMIZATION_REVIEW`, `LIGHT_PROFILE`, `AUTO_DEPLOY`, `SANITY_FIRST`, and `MAX_PARALLEL_RUNS` are configurable — see [Customization](#%EF%B8%8F-customization).
+> ⚙️ `CODE_REVIEW`, `CODE_REVIEW_MODE`, `RUNTIME_REVIEW`, `OPTIMIZATION_REVIEW`, `LIGHT_PROFILE`, `LONG_RUN_RESUME`, `LONG_RUN_THRESHOLD`, `AUTO_DEPLOY`, `SANITY_FIRST`, and `MAX_PARALLEL_RUNS` are configurable — see [Customization](#%EF%B8%8F-customization).
 
 ### Workflow 2: Auto Research Loop 🔁 (sleep & wake up to results)
 
@@ -565,9 +566,9 @@ After Workflow 3 generates the paper, `/auto-paper-improvement-loop` runs 2 roun
 
 | Skill | Description | Codex MCP? |
 |-------|-------------|:---:|
-| 🔗 **[`experiment-bridge`](skills/experiment-bridge/SKILL.md)** | Read experiment plan → implement code → debate with reviewer → sanity/runtime review → deploy to GPU → collect initial results | No |
-| ├ 🚀 [`run-experiment`](skills/run-experiment/SKILL.md) | Deploy experiments to local (MPS/CUDA) or remote GPU servers and write `EXPERIMENT_RUNTIME.json` | No |
-| └ 👀 [`monitor-experiment`](skills/monitor-experiment/SKILL.md) | Monitor running experiments, check progress, collect results | No |
+| 🔗 **[`experiment-bridge`](skills/experiment-bridge/SKILL.md)** | Read experiment plan → implement code → debate with reviewer → sanity/runtime review → deploy to GPU → collect initial results, with long-run resumeability enforced as a blocker | No |
+| ├ 🚀 [`run-experiment`](skills/run-experiment/SKILL.md) | Deploy experiments to local (MPS/CUDA) or remote GPU servers, write `EXPERIMENT_RUNTIME.json`, and preserve long-run resume metadata | No |
+| └ 👀 [`monitor-experiment`](skills/monitor-experiment/SKILL.md) | Monitor running experiments, report latest checkpoint / progress, and tell you whether resume is available | No |
 
 ### 🔁 Workflow 2: Auto Research Loop
 
@@ -576,9 +577,9 @@ After Workflow 3 generates the paper, `/auto-paper-improvement-loop` runs 2 roun
 | 🔁 **[`auto-review-loop`](skills/auto-review-loop/SKILL.md)** | **Pipeline orchestrator** — autonomous review→fix→re-review (max 4 rounds) | Yes |
 | ├ 🔬 [`research-review`](skills/research-review/SKILL.md) | Deep review from external LLM (shared with Workflow 1) | Yes |
 | ├ 🔍 [`novelty-check`](skills/novelty-check/SKILL.md) | Verify novelty when reviewer suggests new directions | Yes |
-| ├ 🚀 [`run-experiment`](skills/run-experiment/SKILL.md) | Deploy experiments to local (MPS/CUDA) or remote GPU servers | No |
+| ├ 🚀 [`run-experiment`](skills/run-experiment/SKILL.md) | Deploy experiments to local (MPS/CUDA) or remote GPU servers with long-run resume metadata | No |
 | ├ 📊 [`analyze-results`](skills/analyze-results/SKILL.md) | Analyze experiment results, compute statistics, generate insights | No |
-| └ 👀 [`monitor-experiment`](skills/monitor-experiment/SKILL.md) | Monitor running experiments, check progress, collect results | No |
+| └ 👀 [`monitor-experiment`](skills/monitor-experiment/SKILL.md) | Monitor running experiments, report latest checkpoint / progress, and tell you whether resume is available | No |
 | 🔁 [`auto-review-loop-llm`](skills/auto-review-loop-llm/SKILL.md) | Same as above, but uses any OpenAI-compatible API via [`llm-chat`](mcp-servers/llm-chat/) MCP server | No |
 
 ### 📝 Workflow 3: Paper Writing
@@ -1049,6 +1050,8 @@ Skills are plain Markdown files. Fork and customize:
 | `OPTIMIZATION_REVIEW` | true | Run a second-pass optimization review for backend / memory / throughput opportunities | → `experiment-bridge` |
 | `WORKLOAD_PROFILE` | `mixed` | Hint whether the run is training-heavy, inference-heavy, or mixed | → `experiment-bridge` |
 | `LIGHT_PROFILE` | true | Request a short hotspot / memory sample during sanity when supported | → `experiment-bridge` → `run-experiment` |
+| `LONG_RUN_RESUME` | `required` | Treat missing checkpoint / auto-resume support as a correctness blocker for any multi-step or ~10+ minute run | → `experiment-bridge` → `run-experiment` |
+| `LONG_RUN_THRESHOLD` | `10min_or_multi_step` | Classify long runs by expected runtime or iterative structure; long runs must emit resume metadata | → `experiment-bridge` → `run-experiment` |
 | `BASE_REPO` | false | GitHub repo URL to clone as base codebase for experiments | → `experiment-bridge` |
 | `ILLUSTRATION` | `ai` | AI illustration: `ai` (default, PaperBanana-derived runtime with browser-first Gemini web rendering), `mermaid` (free), or `false` (skip) | → `paper-writing` |
 | `ILLUSTRATION_BACKEND` | `browser` | Illustration backend: `browser` (default, dedicated Gemini web profile) or `api` (explicit fallback requiring API credentials) | → `paper-writing` → `paper-illustration` |
@@ -1091,6 +1094,8 @@ Override inline: `/idea-discovery "topic" — pilot budget: 4h per idea, sources
 | `OPTIMIZATION_AUTHORITY` | `recommend` | Recommendation-only in v1. Debate may suggest a switch, but must not silently mutate frameworks or kernels |
 | `WORKLOAD_PROFILE` | `mixed` | Hint whether the workload is `training`, `inference`, or `mixed` |
 | `LIGHT_PROFILE` | true | Request a short hotspot / memory sample during sanity when supported; otherwise fall back to coarse evidence |
+| `LONG_RUN_RESUME` | `required` | Long runs must checkpoint and auto-resume; missing resumeability blocks deployment |
+| `LONG_RUN_THRESHOLD` | `10min_or_multi_step` | A run is long if it is clearly iterative or likely to exceed roughly 10 minutes |
 | `AUTO_DEPLOY` | true | Automatically deploy experiments after implementation + review. Set `false` to manually inspect |
 | `SANITY_FIRST` | true | Run smallest experiment first to catch setup bugs before full deployment |
 | `MAX_PARALLEL_RUNS` | 4 | Maximum experiments to deploy in parallel (limited by available GPUs) |

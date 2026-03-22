@@ -34,6 +34,29 @@ If JSON results exist, fetch and parse them:
 ssh <server> "cat <results_dir>/<latest>.json"
 ```
 
+### Step 3.2: Inspect Runtime Artifact and Resume State
+
+Read `refine-logs/EXPERIMENT_RUNTIME.json` when it exists. For each active or recent run, extract:
+- `status`
+- `resume_capable`
+- `resume_policy`
+- `output_dir`
+- `checkpoint_dir`
+- `run_state_path`
+- `latest_checkpoint`
+- `progress_marker`
+- `resume_command`
+
+If a run-state file exists, fetch it too:
+```bash
+ssh <server> "cat <output_dir>/RUN_STATE.json"
+```
+
+Use it to answer:
+- what was the last completed epoch / step / iteration?
+- is a valid checkpoint available right now?
+- if the run stopped, can it resume automatically or not?
+
 ### Step 3.5: Pull W&B Metrics (when `wandb: true` in CLAUDE.md)
 
 **Skip this step entirely if `wandb` is not set or is `false` in CLAUDE.md.**
@@ -86,10 +109,10 @@ https://wandb.ai/<entity>/<project>/runs/<run_id>
 
 Present results in a comparison table:
 ```
-| Experiment | Metric | Delta vs Baseline | Status |
-|-----------|--------|-------------------|--------|
-| Baseline  | X.XX   | —                 | done   |
-| Method A  | X.XX   | +Y.Y              | done   |
+| Experiment | Metric | Delta vs Baseline | Status | Resume |
+|-----------|--------|-------------------|--------|--------|
+| Baseline  | X.XX   | —                 | done   | yes (epoch 2 / step 1400) |
+| Method A  | X.XX   | +Y.Y              | interrupted | yes (latest ckpt: step_2800) |
 ```
 
 ### Step 5: Interpret
@@ -107,4 +130,5 @@ After results are collected, check `~/.claude/feishu.json`:
 - Always show raw numbers before interpretation
 - Compare against the correct baseline (same config)
 - Note if experiments are still running (check progress bars, iteration counts)
+- Distinguish `interrupted` from `failed`; if resume metadata exists, say exactly where the next launch would continue from
 - If results look wrong, check training logs for errors before concluding

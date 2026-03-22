@@ -32,6 +32,8 @@ The debate loop is default-enabled in v1. It is framework-agnostic at the core, 
 - **OPTIMIZATION_AUTHORITY = `recommend`** — Recommendation-only in v1. The skill may argue for a change, but must not silently switch frameworks or write Triton/CUDA just because the reviewer suggested it.
 - **WORKLOAD_PROFILE = `mixed`** — Expected workload shape. Options: `mixed`, `training`, `inference`.
 - **LIGHT_PROFILE = true** — Request a short hotspot / memory sample during sanity runs when the stack exposes a clean profiler. Fall back to coarse timing and memory evidence otherwise.
+- **LONG_RUN_RESUME = `required`** — Any experiment that is multi-step or likely to run for 10+ minutes must be resumable. Missing resumeability is a deployment blocker.
+- **LONG_RUN_THRESHOLD = `10min_or_multi_step`** — Classify a run as "long" if it is clearly iterative (training / finetuning / search / long batched generation or evaluation) or likely to exceed roughly 10 minutes.
 - **AUTO_DEPLOY = true** — Automatically deploy experiments after implementation + review. Set `false` to manually inspect code before deploying.
 - **SANITY_FIRST = true** — Run the sanity-stage experiment first (smallest, fastest) before launching the rest. Catches setup bugs early.
 - **MAX_PARALLEL_RUNS = 4** — Maximum number of experiments to deploy in parallel (limited by available GPUs).
@@ -78,6 +80,7 @@ Long-running debate loops may hit context limits or pause while experiments run.
 - `refine-logs/EXPERIMENT_DEBATE_LOG.md` — round-by-round findings with `ACCEPTED`, `DEFERRED`, or `REJECTED` decisions and one-line rationales
 - `refine-logs/EXPERIMENT_DEBATE_STATE.json` — compact recovery state
 - `refine-logs/EXPERIMENT_RUNTIME.json` — parseable runtime evidence from sanity and deployed runs
+- `results/*/RUN_STATE.json` — per-run progress + latest-checkpoint state for long resumable runs
 - `refine-logs/EXPERIMENT_TRACKER.md` — run-by-run execution table with status notes
 - `refine-logs/EXPERIMENT_RESULTS.md` — initial results summary
 
@@ -130,6 +133,11 @@ For each milestone (in order), write the experiment scripts:
    - data loading / preprocessing if needed
    - baseline implementations if not already present
    - fixed random seeds for reproducibility
+   - stable output roots for each run, preferably `results/<run_name>/` when writing new code from scratch
+   - periodic checkpoints for every long run, stored under a canonical checkpoint directory (default: `<output_dir>/checkpoints/`)
+   - a parseable per-run state file (default: `<output_dir>/RUN_STATE.json`) recording latest checkpoint + last completed progress unit
+   - enough persisted state to resume correctly: model, optimizer, scheduler, RNG/progress counters, and output locations
+   - auto-resume behavior: relaunching the same run should discover the latest valid checkpoint and continue without a manually edited command
    - results saved to JSON/CSV for later analysis
    - proper logging (wandb if configured in `CLAUDE.md`)
    - metric and runtime hooks needed for `refine-logs/EXPERIMENT_RUNTIME.json`
@@ -140,6 +148,8 @@ For each milestone (in order), write the experiment scripts:
    - are results saved in a parseable format (JSON/CSV)?
    - does the code match `FINAL_PROPOSAL.md`'s method description?
    - does the run path expose enough runtime evidence for `/run-experiment` to write `EXPERIMENT_RUNTIME.json`?
+   - for every long run, do `output_dir`, `checkpoint_dir`, and `RUN_STATE.json` exist as stable locations?
+   - for every long run, can the same launch path auto-resume from the latest valid checkpoint after interruption?
 
 ### Phase 2.5: Cross-Model Debate Review (when CODE_REVIEW = true)
 
@@ -192,6 +202,8 @@ mcp__codex__codex:
     4. Is the evaluation metric computed correctly?
     5. CRITICAL: Does evaluation use the dataset's actual ground truth labels?
     6. Any likely runtime blockers (OOM, NaN/Inf risk, missing seeds, malformed outputs)?
+    7. For any long run, does the code checkpoint often enough and auto-resume correctly from the latest valid checkpoint?
+    8. Does the persisted state include optimizer / scheduler / RNG / progress counters instead of model weights only?
 
     ## Pass B: Performance and Stability Optimization
     Check:
@@ -278,8 +290,14 @@ The sanity run must refresh `refine-logs/EXPERIMENT_RUNTIME.json`.
 Verify:
 - the training loop runs without errors
 - metrics are computed and saved correctly
-- `EXPERIMENT_RUNTIME.json` contains command, environment, exit code, wall time, GPU memory, throughput if available, and failure signatures
+- `EXPERIMENT_RUNTIME.json` contains command, environment, exit code, wall time, GPU memory, throughput if available, failure signatures, and long-run resume metadata when applicable
 - the runtime evidence does not show blocker-level anomalies
+
+For any sanity-stage run that is long or multi-step, do a resume smoke test before full deployment:
+- let the run produce at least one valid checkpoint
+- interrupt it once
+- relaunch through the same run path
+- verify it resumes from the latest checkpoint instead of restarting from step 0
 
 If sanity fails or evidence is malformed → go to Phase 3.5. Do not proceed to full deployment with broken code.
 
@@ -292,6 +310,7 @@ Re-enter review after sanity or deployment if `EXPERIMENT_RUNTIME.json` shows an
 - `CUDA out of memory`, OOM killer, or repeated allocator failures
 - `nan`, `inf`, or divergence-like numerical signatures
 - missing metrics file or malformed JSON/CSV outputs
+- interrupted run with missing / invalid checkpoint metadata or no reconstructable resume path
 - severe slowdown (for example, throughput far below a comparable baseline / hardware expectation, or a short profile showing the GPU mostly idle)
 
 Use the existing reviewer thread when available; otherwise start a new one. Provide:
@@ -380,7 +399,7 @@ As experiments complete:
 ### M1: Baselines
 | Run | System | Key Metric | Runtime Note | Status |
 |-----|--------|-----------|--------------|--------|
-| R001 | baseline_1 | X.XX | [throughput / memory] | DONE |
+| R001 | baseline_1 | X.XX | [throughput / memory / resume=yes] | DONE |
 
 ### M2: Main Method
 | Run | System | Key Metric | Runtime Note | Status |
@@ -437,10 +456,12 @@ Ready for Workflow 2:
 
 - **Large file handling**: If the Write tool fails due to file size, immediately retry using Bash (`cat << 'EOF' > file`) to write in chunks. Do NOT ask the user for permission — just do it silently.
 - **CRITICAL — Evaluation must use dataset ground truth.** When writing evaluation scripts, ALWAYS compare model predictions against the dataset's actual ground truth labels / targets — NEVER use another model's output as ground truth.
+- **CRITICAL — Long runs must be resumable.** Any multi-step or 10+ minute run must checkpoint periodically and auto-resume from the latest valid checkpoint.
 - **Follow the plan.** Do not invent experiments not in `EXPERIMENT_PLAN.md`. If you think something is missing, note it but do not add it silently.
 - **Sanity first.** Never deploy a full suite without verifying the sanity stage passes and `EXPERIMENT_RUNTIME.json` is usable.
 - **Reuse existing code.** Extend, do not duplicate.
 - **Save everything as JSON/CSV.** The downstream loops need parseable results, not just terminal output.
+- **Prefer stable run roots.** New experiment code should default to `results/<run_name>/`, with `checkpoints/` and `RUN_STATE.json` underneath unless the project already has a stronger native convention.
 - **Do not auto-switch frameworks.** A suggestion to use a different backend belongs in the debate log until explicitly accepted for a future change.
 - **Do not recommend Triton / CUDA casually.** Require hotspot evidence, a fallback path, and an expected gain statement.
 - **Update the tracker.** `EXPERIMENT_TRACKER.md` should reflect real status after each run completes.

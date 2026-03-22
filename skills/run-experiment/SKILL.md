@@ -13,6 +13,11 @@ This skill is the execution side of Workflow 1.5. In v1 it must do two things:
 - launch the experiment correctly
 - write parseable runtime evidence to `refine-logs/EXPERIMENT_RUNTIME.json`
 
+It now also owns the **long-run resume contract**:
+- any run that is multi-step or likely to exceed roughly 10 minutes is a **long run**
+- long runs must be checkpointed and resumable
+- the next launch must auto-resume from the latest valid checkpoint without a manually edited command
+
 ## Workflow
 
 ### Step 1: Detect Environment
@@ -44,6 +49,16 @@ python -c "import torch; print('MPS available:', torch.backends.mps.is_available
 Free GPU = memory.used < 500 MiB.
 
 Record the selected device and environment summary for the runtime artifact.
+
+Classify the launch before touching the target machine:
+- **Long run** = clearly iterative (training / finetuning / search / long batched generation or evaluation) or likely to exceed roughly 10 minutes
+- **Short one-shot run** = stateless and below that threshold
+
+If a run is long, it is not launchable until the code exposes:
+- a stable `output_dir`
+- a canonical `checkpoint_dir`
+- a parseable run-state file
+- an auto-resume path from the latest valid checkpoint
 
 ### Step 3: Sync Code (Remote Only)
 
@@ -110,6 +125,18 @@ Before deploying, ensure the experiment scripts have W&B logging:
 
 Before launch, create or refresh `refine-logs/EXPERIMENT_RUNTIME.json`.
 
+For newly written experiment code, prefer this default layout:
+
+```text
+results/<run_name>/
+├── checkpoints/
+├── RUN_STATE.json
+├── metrics.json   # or project-native results file
+└── train.log      # or tee output
+```
+
+Project-native layouts are allowed, but the runtime artifact must still record the concrete `output_dir`, `checkpoint_dir`, and run-state path.
+
 The artifact must include, at minimum:
 
 ```json
@@ -130,6 +157,13 @@ The artifact must include, at minimum:
 For each launched run, append or update a run record with:
 - run name / screen session / PID if available
 - command
+- resume classification (`resume_capable`, `resume_policy`)
+- `output_dir`
+- `checkpoint_dir`
+- `run_state_path`
+- `latest_checkpoint`
+- `progress_marker`
+- `resume_command`
 - exit code
 - wall time
 - GPU memory sample(s)
@@ -137,6 +171,27 @@ For each launched run, append or update a run record with:
 - log file path
 - metrics file path if available
 - `failure_signatures`: array of matched runtime issues (`oom`, `nan`, `inf`, `missing_metrics`, `malformed_output`, `slowdown`, `timeout`, `unknown`)
+
+For long runs, maintain a parseable run-state file at the canonical path (default: `<output_dir>/RUN_STATE.json`) with at least:
+
+```json
+{
+  "run_name": "baseline_seed1",
+  "status": "running",
+  "output_dir": "results/baseline_seed1",
+  "checkpoint_dir": "results/baseline_seed1/checkpoints",
+  "latest_checkpoint": "results/baseline_seed1/checkpoints/step_1400.pt",
+  "progress_marker": {
+    "epoch": 2,
+    "step": 1400,
+    "updated_at": "2026-03-22T21:15:00"
+  },
+  "resume_command": "python train.py --output_dir results/baseline_seed1 --resume auto",
+  "updated_at": "2026-03-22T21:15:00"
+}
+```
+
+Use the progress fields that make sense for the codebase (`epoch`, `step`, `iteration`, `sample_count`, etc.), but record at least one monotonically increasing progress marker plus `updated_at`.
 
 ### Step 5: Optional Light Profiling
 
@@ -152,17 +207,18 @@ The core path must remain framework-agnostic. If profiling would require invasiv
 
 #### Remote (via SSH + screen)
 
-For each experiment, create a dedicated screen session with GPU binding. Wrap the command so runtime evidence is captured:
+For each experiment, create a dedicated screen session with GPU binding. Wrap the command so runtime evidence is captured and long runs auto-resume:
 
 ```bash
 ssh <server> "screen -dmS <exp_name> bash -c '\
   eval \"\$(<conda_path>/conda shell.bash hook)\" && \
   conda activate <env> && \
+  # inspect RUN_STATE.json / checkpoint_dir and construct the exact resume command when a valid checkpoint exists \
   START_TS=\$(date -Iseconds) && \
   /usr/bin/time -f \"WALL=%e\" sh -c \"CUDA_VISIBLE_DEVICES=<gpu_id> python <script> <args> 2>&1 | tee <log_file>\"; \
   EXIT_CODE=\$?; \
   END_TS=\$(date -Iseconds); \
-  # update refine-logs/EXPERIMENT_RUNTIME.json with exit code, wall time, and failure signatures \
+  # update refine-logs/EXPERIMENT_RUNTIME.json with exit code, wall time, failure signatures, latest checkpoint, and progress marker \
   exit \$EXIT_CODE'"
 ```
 
@@ -183,12 +239,20 @@ For local long-running jobs, use `run_in_background: true` to keep the conversat
 After launch (and again after completion for background jobs), update `refine-logs/EXPERIMENT_RUNTIME.json` with:
 
 - `status`: `running`, `completed`, or `failed`
+- `resume_capable`: `true` / `false`
+- `resume_policy`: `auto`, `not_applicable`, or an explicit project-native policy string
+- `output_dir`, `checkpoint_dir`, `run_state_path`
+- `latest_checkpoint`
+- `progress_marker`
+- `resume_command`
 - selected GPU / device
 - wall time
 - peak or sampled GPU memory if available
 - throughput if available
 - metrics artifact location if available
 - failure signatures derived from logs
+
+Interrupted runs must be recorded distinctly from clean failures. Use `status: interrupted` when the run stopped after making valid resume state, so the next invocation knows to attempt resume first instead of treating it as a fresh failure.
 
 Scan logs for at least these signatures:
 - `CUDA out of memory`
@@ -228,6 +292,7 @@ After deployment is verified, check `~/.claude/feishu.json`:
 Minimum contract:
 - `refine-logs/EXPERIMENT_RUNTIME.json` exists
 - the latest run has `command`, `environment`, `exit_code` or `status`, `wall_time` if finished, and `failure_signatures`
+- long runs also have `resume_capable`, `resume_policy`, `output_dir`, `checkpoint_dir`, `run_state_path`, `latest_checkpoint`, `progress_marker`, and `resume_command`
 - log file path is recorded
 - throughput / GPU memory are included when available, not fabricated when unavailable
 
@@ -235,9 +300,11 @@ Minimum contract:
 
 - ALWAYS check GPU availability first — never blindly assign GPUs
 - ALWAYS write `refine-logs/EXPERIMENT_RUNTIME.json` — debate loops depend on it
+- NEVER launch a long run without a stable output root, checkpoint directory, run-state file, and auto-resume path
 - Each experiment gets its own screen session + GPU (remote) or background process (local)
 - Use `tee` to save logs for later inspection
 - Capture structured failure signatures, not just free-form notes
+- Record interruptions distinctly from failures so the next launch can resume instead of guessing
 - Use light profiling only when it is straightforward; otherwise record coarse runtime evidence and move on
 - Report back: which GPU, which screen / process, what command, estimated time, and where the runtime artifact was written
 - If multiple experiments run in parallel, keep separate run records inside the same runtime artifact
