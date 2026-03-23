@@ -76,6 +76,8 @@ codex setup                    # 提示选模型时选 gpt-5.4
 claude mcp add codex -s user -- codex mcp-server
 
 # 3. 在 ARIS repo 根目录内使用
+# 当前仓库已内置 `.claude/skills/` 项目级 Claude skills，
+# 所以从 repo 根目录启动 Claude 后会直接出现主要工作流的 slash 命令。
 claude
 > /idea-discovery "你的研究方向"              # 工作流 1 — 方向要具体！不要 "NLP"，要 "离散扩散语言模型的 factorized gap"
 > /experiment-bridge                         # 工作流 1.5 — 有计划了？实现 + 部署 + 收结果
@@ -595,7 +597,7 @@ ARIS 现在只支持 **repo 工作区模式**：
 
 - 保留 `skills/`、`tools/`、`memory/`、`vendor-skills/`、`refine-logs/` 在当前 repo 内
 - 从这个 repo 根目录运行主入口 workflow
-- 不再把 skills 复制到 `~/.claude/skills/` 或 `~/.codex/skills/`
+- 直接引用当前工作区中的 skill 文件
 
 ### Repo 本地 Vendor Skills 与 Memory
 

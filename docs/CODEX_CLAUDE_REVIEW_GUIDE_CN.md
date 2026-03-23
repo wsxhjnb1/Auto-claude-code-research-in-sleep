@@ -6,7 +6,7 @@
 - **Claude Code CLI** 作为审稿人
 - 通过本地 `claude-review` MCP bridge 连接两者
 
-这条路径是当前 ARIS 工作区内的 **repo 本地叠加方案**，不需要把 skills 复制到 `~/.codex/skills/`。
+这条路径是当前 ARIS 工作区内的 **repo 本地叠加方案**。直接使用当前 checkout 的仓库即可提供 skills、overlay 和 runtime。
 
 ## 架构
 

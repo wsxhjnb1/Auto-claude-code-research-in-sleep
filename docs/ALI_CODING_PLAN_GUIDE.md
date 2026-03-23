@@ -96,23 +96,13 @@ cd Auto-claude-code-research-in-sleep
 pip3 install -r mcp-servers/llm-chat/requirements.txt
 ```
 
-### Step 3：部署 llm-chat MCP 服务器
+### Step 3：坚持 repo 工作区模式
 
-```bash
-mkdir -p ~/.claude/mcp-servers/llm-chat
-cp mcp-servers/llm-chat/server.py ~/.claude/mcp-servers/llm-chat/server.py
-```
+ARIS 现在只支持 **repo 工作区模式**。保持当前 clone/fork 的仓库为运行时根目录，所有 `skills/`、MCP server 和状态文件路径都直接指向这个 repo。
 
-### Step 4：安装 Skills
+### Step 4：配置 ~/.claude/settings.json
 
-```bash
-mkdir -p ~/.claude/skills
-cp -r skills/* ~/.claude/skills/
-```
-
-### Step 5：配置 ~/.claude/settings.json
-
-以下为推荐配置（kimi-k2.5 执行 + glm-5 审查）。用 `which python3` 替换 `command` 中的 python3 路径，用 `echo $HOME` 替换路径中的 `$HOME`：
+以下为推荐配置（kimi-k2.5 执行 + glm-5 审查）。用 `which python3` 替换 `command` 中的 python3 路径，并把 `args` 中的 `server.py` 替换为 **当前 ARIS repo 内的绝对路径**：
 
 ```json
 {
@@ -128,7 +118,7 @@ cp -r skills/* ~/.claude/skills/
   "mcpServers": {
     "llm-chat": {
       "command": "/usr/bin/python3",
-      "args": ["$HOME/.claude/mcp-servers/llm-chat/server.py"],
+      "args": ["/path/to/Auto-claude-code-research-in-sleep/mcp-servers/llm-chat/server.py"],
       "env": {
         "LLM_API_KEY": "your-coding-plan-api-key",
         "LLM_BASE_URL": "https://coding.dashscope.aliyuncs.com/v1",
@@ -139,9 +129,9 @@ cp -r skills/* ~/.claude/skills/
 }
 ```
 
-> **Linux 路径说明**：`$HOME` 通常为 `/root`（root 用户）或 `/home/用户名`。运行 `echo $HOME` 确认，并将配置中 `args` 里的 `$HOME` 替换为实际路径（settings.json 不会自动展开 shell 变量）。同理，用 `which python3` 确认 python3 实际路径。
+> **路径说明**：`settings.json` 不会自动展开 shell 变量。请把 `command` 和 `args` 都改成真实绝对路径；其中 `args` 必须指向当前 ARIS repo 内的 `mcp-servers/llm-chat/server.py`。
 
-### Step 6：改写所有使用 Codex MCP 的 Skills
+### Step 5：改写所有使用 Codex MCP 的 Skills
 
 项目中有 **12 个 skill** 调用 `mcp__codex__codex`（依赖 OpenAI Responses API，Coding Plan 不支持）。在启动 Claude Code 后执行以下指令，让它自动完成改写：
 
@@ -153,11 +143,11 @@ to use mcp__llm-chat__chat instead, following the same pattern.
 ```
 
 Claude Code 会自动：
-1. 扫描 `~/.claude/skills/` 中所有使用 Codex MCP 的 skill 文件
+1. 扫描当前 ARIS repo 内所有使用 Codex MCP 的 skill 文件
 2. 参考 `auto-review-loop-llm` 的写法（MCP 优先 + curl fallback）
 3. 逐个改写为调用 `mcp__llm-chat__chat`
 
-> **注意**：此操作只修改 `~/.claude/skills/` 中的本地副本，不影响仓库原文件。如需恢复，重新执行 Step 4 即可。
+> **注意**：此操作会修改当前 ARIS repo 内的 skill 文件。如需恢复，使用 `git restore skills/`、`git checkout -- skills/`，或重新同步仓库。
 
 ---
 
@@ -175,7 +165,7 @@ Claude Code 会自动：
 
 ## 使用方法
 
-配置完成后，按如下方式启动 Claude Code 并使用 skill：
+配置完成后，按如下方式启动 Claude Code 并在 **当前 ARIS repo 根目录** 中使用 workflow：
 
 ```bash
 claude
@@ -183,17 +173,19 @@ claude
 
 ### 直接可用（无需改写）
 
-```
-/auto-review-loop-llm "你的论文主题"    # 已原生支持 llm-chat MCP
+在 Claude Code 中直接引用 repo 内技能文件：
+
+```text
+Read skills/auto-review-loop-llm/SKILL.md and run it for "你的论文主题".
 ```
 
-### 改写后可用（Step 6 完成后）
+### 改写后可用（Step 5 完成后）
 
-```
-/idea-discovery "你的研究方向"          # 工作流 1：文献 → idea → 查新 → 实验
-/auto-review-loop "你的论文主题"        # 工作流 2：自动 review 循环
-/paper-writing "NARRATIVE_REPORT.md"   # 工作流 3：叙事 → LaTeX → PDF
-/research-pipeline "你的研究方向"       # 完整流水线：1 → 2 → 3
+```text
+Read skills/idea-discovery/SKILL.md and run it for "你的研究方向".
+Read skills/auto-review-loop/SKILL.md and run it for "你的论文主题".
+Read skills/paper-writing/SKILL.md and use NARRATIVE_REPORT.md as input.
+Read skills/research-pipeline/SKILL.md and run the full pipeline for "你的研究方向".
 ```
 
 ---
@@ -230,7 +222,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
   LLM_API_KEY="your-coding-plan-api-key" \
   LLM_BASE_URL="https://coding.dashscope.aliyuncs.com/v1" \
   LLM_MODEL="glm-5" \
-  python3 ~/.claude/mcp-servers/llm-chat/server.py
+  python3 /path/to/Auto-claude-code-research-in-sleep/mcp-servers/llm-chat/server.py
 ```
 
 预期输出中包含：`"protocolVersion":"2024-11-05"`
@@ -239,7 +231,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
 
 ```bash
 claude
-> 读一下这个项目，验证 /auto-review-loop-llm skill 是否正常可用，列出可识别的所有 skill
+> Read skills/auto-review-loop-llm/SKILL.md, verify it is usable in this repo workspace, and list the key repo-local workflows available here.
 ```
 
 ---
@@ -247,24 +239,21 @@ claude
 ## 文件结构总览
 
 ```
-~/.claude/
-├── settings.json                        # 包含 Coding Plan 执行器 + llm-chat MCP 配置
+Auto-claude-code-research-in-sleep/
+├── skills/
+│   ├── auto-review-loop-llm/
+│   │   └── SKILL.md                     # 已原生支持 llm-chat MCP，无需改写
+│   ├── idea-creator/
+│   │   └── SKILL.md                     # Step 5 改写后调用 mcp__llm-chat__chat
+│   ├── research-review/
+│   │   └── SKILL.md                     # Step 5 改写后调用 mcp__llm-chat__chat
+│   ├── novelty-check/
+│   │   └── SKILL.md                     # Step 5 改写后调用 mcp__llm-chat__chat
+│   └── ...
 ├── mcp-servers/
 │   └── llm-chat/
-│       └── server.py                    # 通用 LLM MCP 服务器（支持任意 OpenAI 兼容 API）
-└── skills/
-    ├── auto-review-loop-llm/
-    │   └── SKILL.md                     # 已原生支持 llm-chat MCP，无需改写
-    ├── idea-creator/
-    │   └── SKILL.md                     # Step 6 改写后调用 mcp__llm-chat__chat
-    ├── research-review/
-    │   └── SKILL.md                     # Step 6 改写后调用 mcp__llm-chat__chat
-    ├── novelty-check/
-    │   └── SKILL.md                     # Step 6 改写后调用 mcp__llm-chat__chat
-    └── ...（其余 11 个 skill 类似）
-
-项目目录（运行时生成）/
-├── AUTO_REVIEW.md                       # 审查日志（自动追加）
+│       └── server.py                    # MCP server，settings.json 直接用绝对路径引用
+├── AUTO_REVIEW.md                       # 审查日志（运行时生成）
 └── REVIEW_STATE.json                    # 状态持久化，支持断点恢复
 ```
 
@@ -298,7 +287,7 @@ Coding Plan 专属 API Key 与百炼平台按量调用 Key 不互通。确认在
 
 **Q：改写后 skill 仍然调用 mcp__codex__codex？**
 
-检查 `~/.claude/skills/` 下对应 SKILL.md 文件内容是否已更新。若未改写，重新执行 Step 6 的指令。
+检查当前 ARIS repo 内对应 `skills/.../SKILL.md` 是否已更新。若未改写，重新执行 Step 5 的指令。
 
 **Q：Linux 上 python3 路径在哪？**
 

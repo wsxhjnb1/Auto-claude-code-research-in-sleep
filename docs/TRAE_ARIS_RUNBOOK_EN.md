@@ -7,7 +7,7 @@ Use ARIS research workflows in Trae without relying on Claude Code `/skill-name`
 | Concept | Claude Code | Trae |
 |---|---|---|
 | Skill invocation | `/skill-name "args"` (slash command) | Natural language auto-discovery, `#` quick match, `@skills/.../SKILL.md` (file reference) |
-| Skill storage | `~/.claude/skills/...` | Global `~/.trae/skills/` (cross-project available) or project `<project>/.trae/skills/` (current project only), or directly reference ARIS repo `skills/` |
+| ARIS workspace | Open the ARIS repo and use repo-local `skills/.../SKILL.md` | Open the ARIS repo as the Trae workspace and reference repo-local `skills/.../SKILL.md` |
 | MCP setup | `claude mcp add ...` | `Settings → MCP → Manual Add` |
 | Agent execution | Persistent CLI session | Chat/Agent session |
 | File references | Auto-read from project | Explicit `@filename` attachment |
@@ -17,36 +17,17 @@ Use ARIS research workflows in Trae without relying on Claude Code `/skill-name`
 
 It is recommended to create a dedicated Trae agent for ARIS workflows to avoid conflicts with other agents and to keep role instructions stable.
 
-### 2.1 Clone the repository and configure Skills
+### 2.1 Clone the repository and open it as the workspace
 
 ```powershell
 git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
 ```
 
-**Two ways to install Skills in Trae:**
+Then open **this repo itself** in Trae.
 
-Method 1: Install via Trae UI (Recommended)
+> **Important:** ARIS now supports only **repo workspace mode**. Keep `skills/`, `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/` inside the cloned ARIS repo and let Trae operate on that workspace directly.
 
-1. Go to `Settings → Rules and Skills`
-2. Select "Global" or "Project" installation scope
-3. Click "Import File" and select SKILL.md files from the ARIS repo's `skills/` directory
-4. After installation, skills can be triggered via natural language
-
-> **Note:** Globally installed skills can be triggered via natural language in all projects; project-level installed skills can be triggered via natural language within that project.
-
-Method 2: Manual copy to skills directory
-
-```powershell
-# Global installation (available in all projects)
-New-Item -ItemType Directory -Path "$env:USERPROFILE\.trae\skills" -Force
-Copy-Item -Path "C:\path\to\Auto-claude-code-research-in-sleep\skills\*" -Destination "$env:USERPROFILE\.trae\skills\" -Recurse -Force
-
-# Project-level installation (available only in current project)
-New-Item -ItemType Directory -Path ".\.trae\skills" -Force
-Copy-Item -Path "C:\path\to\Auto-claude-code-research-in-sleep\skills\*" -Destination ".\.trae\skills\" -Recurse -Force
-```
-
-After installation, simply describe your needs in natural language within the corresponding scope to trigger the relevant skill.
+If your Trae build requires explicit skill import for discovery, import the `SKILL.md` files **from this repo** and keep editing the originals here.
 
 ### 2.2 Configure Codex reviewer MCP (recommended)
 
@@ -155,7 +136,7 @@ Directly reference the skill file and attach an action instruction in the conver
 Run the auto review loop for "factorized gap in discrete diffusion LMs".
 ```
 
-Note: `@skills/.../SKILL.md` references only resolve if the ARIS repo (or its `skills/` folder) is part of the current Trae workspace. They will not work when the skills folder exists only in a separate workspace.
+Note: `@skills/.../SKILL.md` references only resolve if the ARIS repo is part of the current Trae workspace. ARIS no longer supports copying skills into a second directory as an installation mode.
 ### D. Convert Frequent Skills into Local Rules
 
 Move frequently used skill instructions into project rules to reduce repeated manual pasting.
@@ -322,8 +303,8 @@ Use run-experiment skill. Deploy: python train.py --lr 1e-4 --epochs 100
 
 ## 10. Migration Checklist: Claude Code → Trae
 
-- [ ] Go to `Settings → Rules and Skills`, select "Global" or "Project" installation scope
-- [ ] Import ARIS skills' SKILL.md files
+- [ ] Open the ARIS repo as the current Trae workspace
+- [ ] Reference repo-local `skills/.../SKILL.md` files instead of copying them elsewhere
 - [ ] Configure MCP server in `Settings → MCP`
 - [ ] Use natural language to describe needs and trigger skills
 - [ ] Verify MCP tools are available (codex or llm-chat)

@@ -93,23 +93,13 @@ cd Auto-claude-code-research-in-sleep
 pip3 install -r mcp-servers/llm-chat/requirements.txt
 ```
 
-### Step 3：部署 llm-chat MCP 服务器
+### Step 3：坚持 repo 工作区模式
 
-```bash
-mkdir -p ~/.claude/mcp-servers/llm-chat
-cp mcp-servers/llm-chat/server.py ~/.claude/mcp-servers/llm-chat/server.py
-```
+ARIS 现在只支持 **repo 工作区模式**。保持当前 clone/fork 的仓库为运行时根目录，所有 `skills/`、MCP server 和状态文件路径都直接指向这个 repo。
 
-### Step 4：安装 Skills
+### Step 4：配置 ~/.claude/settings.json
 
-```bash
-mkdir -p ~/.claude/skills
-cp -r skills/* ~/.claude/skills/
-```
-
-### Step 5：配置 ~/.claude/settings.json
-
-以下为推荐配置（DeepSeek-V3.1 执行 + DeepSeek-R1 审查）。用 `which python3` 替换 `command` 中的 python3 路径，用 `echo $HOME` 替换路径中的 `$HOME`：
+以下为推荐配置（DeepSeek-V3.1 执行 + DeepSeek-R1 审查）。用 `which python3` 替换 `command` 中的 python3 路径，并把 `args` 中的 `server.py` 改成 **当前 ARIS repo 内的绝对路径**：
 
 ```json
 {
@@ -123,7 +113,7 @@ cp -r skills/* ~/.claude/skills/
   "mcpServers": {
     "llm-chat": {
       "command": "/usr/bin/python3",
-      "args": ["$HOME/.claude/mcp-servers/llm-chat/server.py"],
+      "args": ["/path/to/Auto-claude-code-research-in-sleep/mcp-servers/llm-chat/server.py"],
       "env": {
         "LLM_API_KEY": "ms-your-modelscope-token",
         "LLM_BASE_URL": "https://api-inference.modelscope.cn/v1",
@@ -134,9 +124,9 @@ cp -r skills/* ~/.claude/skills/
 }
 ```
 
-> **路径说明**：`$HOME` 需替换为实际路径（如 `/root` 或 `/home/用户名`），settings.json 不会自动展开 shell 变量。用 `which python3` 确认 python3 实际路径。
+> **路径说明**：`settings.json` 不会自动展开 shell 变量。请把 `command` 和 `args` 都改成真实绝对路径；其中 `args` 必须指向当前 ARIS repo 内的 `mcp-servers/llm-chat/server.py`。
 
-### Step 6：改写所有使用 Codex MCP 的 Skills
+### Step 5：改写所有使用 Codex MCP 的 Skills
 
 项目中有 **12 个 skill** 调用 `mcp__codex__codex`（依赖 OpenAI Responses API，ModelScope 不支持）。在启动 Claude Code 后执行以下指令，让它自动完成改写：
 
@@ -147,9 +137,9 @@ Now rewrite ALL other skills that use mcp__codex__codex / mcp__codex__codex-repl
 to use mcp__llm-chat__chat instead, following the same pattern.
 ```
 
-Claude Code 会自动扫描并改写所有相关 skill。
+Claude Code 会自动扫描并改写当前 ARIS repo 内所有相关 skill。
 
-> **注意**：此操作只修改 `~/.claude/skills/` 中的本地副本，不影响仓库原文件。如需恢复，重新执行 Step 4 即可。
+> **注意**：此操作修改的是当前 ARIS repo 里的 skill 文件。如需恢复，使用 `git restore skills/`、`git checkout -- skills/`，或重新同步仓库。
 
 ---
 
@@ -167,7 +157,7 @@ Claude Code 会自动扫描并改写所有相关 skill。
 
 ## 使用方法
 
-配置完成后启动 Claude Code：
+配置完成后，在 **当前 ARIS repo 根目录** 启动 Claude Code：
 
 ```bash
 claude
@@ -175,17 +165,17 @@ claude
 
 ### 直接可用（无需改写）
 
-```
-/auto-review-loop-llm "你的论文主题"    # 已原生支持 llm-chat MCP
+```text
+Read skills/auto-review-loop-llm/SKILL.md and run it for "你的论文主题".
 ```
 
-### 改写后可用（Step 6 完成后）
+### 改写后可用（Step 5 完成后）
 
-```
-/idea-discovery "你的研究方向"          # 工作流 1：文献 → idea → 查新 → 精炼 → 实验规划
-/auto-review-loop "你的论文主题"        # 工作流 2：自动 review 循环
-/paper-writing "NARRATIVE_REPORT.md"   # 工作流 3：叙事 → LaTeX → PDF
-/research-pipeline "你的研究方向"       # 完整流水线：1 → 2 → 3
+```text
+Read skills/idea-discovery/SKILL.md and run it for "你的研究方向".
+Read skills/auto-review-loop/SKILL.md and run it for "你的论文主题".
+Read skills/paper-writing/SKILL.md and use NARRATIVE_REPORT.md as input.
+Read skills/research-pipeline/SKILL.md and run the full pipeline for "你的研究方向".
 ```
 
 ---
@@ -222,7 +212,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
   LLM_API_KEY="ms-your-modelscope-token" \
   LLM_BASE_URL="https://api-inference.modelscope.cn/v1" \
   LLM_MODEL="deepseek-ai/DeepSeek-R1" \
-  python3 ~/.claude/mcp-servers/llm-chat/server.py
+  python3 /path/to/Auto-claude-code-research-in-sleep/mcp-servers/llm-chat/server.py
 ```
 
 预期输出中包含：`"protocolVersion":"2024-11-05"`
@@ -231,7 +221,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
 
 ```bash
 claude
-> 读一下这个项目，验证所有 skill 是否正常可用
+> Read this repo, verify the repo-local workflows are usable here, and list the main `skills/.../SKILL.md` entrypoints.
 ```
 
 ---

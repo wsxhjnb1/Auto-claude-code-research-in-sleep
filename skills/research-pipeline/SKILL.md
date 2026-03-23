@@ -13,6 +13,10 @@ End-to-end autonomous research workflow for: **$ARGUMENTS**
 
 Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/`.
 
+## Claude Project Entry
+
+When Claude Code is started from the ARIS repo root, the project-level wrapper at `.claude/skills/research-pipeline/SKILL.md` exposes `/research-pipeline`. The canonical implementation remains this file.
+
 ## Constants
 
 - **AUTO_PROCEED = true**

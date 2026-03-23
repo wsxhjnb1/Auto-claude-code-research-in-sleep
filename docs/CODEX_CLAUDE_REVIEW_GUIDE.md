@@ -6,7 +6,7 @@ Run ARIS with:
 - **Claude Code CLI** as the reviewer
 - the local `claude-review` MCP bridge as the transport layer
 
-This guide is **repo-local** to the checked-out ARIS workspace. It does not require copying skills into `~/.codex/skills/`.
+This guide is **repo-local** to the checked-out ARIS workspace. Use the checked-out repo directly for skills, overlays, and runtime scripts.
 
 ## Architecture
 

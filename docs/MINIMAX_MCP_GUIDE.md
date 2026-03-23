@@ -24,26 +24,17 @@ OpenAI Codex CLI 使用 **Responses API** (`/v1/responses`)，而 MiniMax 等第
 
 ## 安装步骤
 
-### 1. 创建 MCP 服务器目录
+### 1. 使用 repo 工作区模式
 
-```bash
-mkdir -p ~/.claude/mcp-servers/minimax-chat
-```
+先克隆或 fork 当前 ARIS 仓库，并始终在该 repo 根目录内使用它。ARIS 现在只支持 **repo 工作区模式**；所有 `skills/`、MCP server 和状态文件都直接使用当前 repo 内的路径。
 
-### 2. 复制 MCP 服务器代码
-
-将 `mcp-servers/minimax-chat/server.py` 复制到：
-```
-~/.claude/mcp-servers/minimax-chat/server.py
-```
-
-### 3. 安装 Python 依赖
+### 2. 安装 Python 依赖
 
 ```bash
 pip3 install -r mcp-servers/minimax-chat/requirements.txt
 ```
 
-### 4. 配置 Claude Code settings.json
+### 3. 配置 Claude Code settings.json
 
 在 `~/.claude/settings.json` 中添加：
 
@@ -55,7 +46,7 @@ pip3 install -r mcp-servers/minimax-chat/requirements.txt
   "mcpServers": {
     "minimax-chat": {
       "command": "/usr/bin/python3",
-      "args": ["/Users/你的用户名/.claude/mcp-servers/minimax-chat/server.py"],
+      "args": ["/path/to/Auto-claude-code-research-in-sleep/mcp-servers/minimax-chat/server.py"],
       "env": {
         "MINIMAX_API_KEY": "你的MiniMax API Key",
         "MINIMAX_BASE_URL": "https://api.minimax.chat/v1",
@@ -66,7 +57,7 @@ pip3 install -r mcp-servers/minimax-chat/requirements.txt
 }
 ```
 
-### 5. 重启 Claude Code
+### 4. 重启 Claude Code
 
 重启后，MCP 服务器将自动加载。
 
@@ -84,20 +75,20 @@ to use mcp__minimax-chat__minimax_chat instead, following the same pattern.
 ```
 
 Claude Code 会自动：
-1. 扫描所有 skill 文件，找到使用 Codex MCP 的地方
+1. 扫描当前 ARIS repo 内所有 skill 文件，找到使用 Codex MCP 的地方
 2. 参考 `auto-review-loop-minimax` 的写法（MCP 优先 + curl fallback）
-3. 逐个改写到你本地的 `~/.claude/skills/` 目录
+3. 逐个改写当前 repo 里的 skill 文件
 
-> **注意**：这只修改你本地的 skill 副本，不影响仓库原文件。
+> **注意**：这会修改当前 ARIS repo 内的 skill 文件。想恢复默认，请使用 `git restore skills/`、`git checkout -- skills/`，或重新同步仓库。
 
 ## 使用方法
 
 ### 方法一：通过 MCP 工具（推荐）
 
-当 MCP 正确配置后，使用：
+当 MCP 正确配置后，在 **当前 ARIS repo 根目录** 中直接引用 repo-local skill：
 
-```
-/auto-review-loop-minimax
+```text
+Read skills/auto-review-loop-minimax/SKILL.md and run it for my paper topic.
 ```
 
 Skill 会自动检测并使用 `mcp__minimax-chat__minimax_chat` 工具。
@@ -111,18 +102,15 @@ Skill 会自动检测并使用 `mcp__minimax-chat__minimax_chat` 工具。
 ## 文件结构
 
 ```
-~/.claude/
-├── settings.json                    # Claude Code 全局配置
+Auto-claude-code-research-in-sleep/
+├── skills/
+│   ├── auto-review-loop/
+│   │   └── SKILL.md                 # 原版（Codex MCP）
+│   └── auto-review-loop-minimax/
+│       └── SKILL.md                 # MiniMax 版
 ├── mcp-servers/
 │   └── minimax-chat/
-│       └── server.py                # MiniMax MCP 服务器
-└── skills/
-    ├── auto-review-loop/
-    │   └── SKILL.md                 # 原版（Codex MCP）
-    └── auto-review-loop-minimax/
-        └── SKILL.md                 # MiniMax 版
-
-项目目录/
+│       └── server.py                # MiniMax MCP 服务器，settings.json 直接引用 repo 绝对路径
 ├── AUTO_REVIEW.md                   # 审查日志（自动生成）
 └── REVIEW_STATE.json                # 状态持久化（自动生成）
 ```
@@ -140,7 +128,7 @@ Skill 会自动检测并使用 `mcp__minimax-chat__minimax_chat` 工具。
 ```bash
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' | \
   MINIMAX_API_KEY="your-key" \
-  python3 ~/.claude/mcp-servers/minimax-chat/server.py
+  python3 /path/to/Auto-claude-code-research-in-sleep/mcp-servers/minimax-chat/server.py
 ```
 
 预期输出：

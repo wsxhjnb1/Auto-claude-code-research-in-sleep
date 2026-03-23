@@ -15,6 +15,10 @@ Autonomously iterate: review → implement fixes → re-review, until the extern
 
 Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, and `refine-logs/`.
 
+## Claude Project Entry
+
+When Claude Code is started from the ARIS repo root, the project-level wrapper at `.claude/skills/auto-review-loop/SKILL.md` exposes `/auto-review-loop`. The canonical implementation remains this file.
+
 ## Constants
 
 - MAX_ROUNDS = 4

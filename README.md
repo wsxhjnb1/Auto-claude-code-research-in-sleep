@@ -29,7 +29,7 @@ Custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skills for 
 ## 📢 What's New
 
 - **2026-03-23** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🔄 **Origin-first auto-sync + single-main fork mode** — ARIS forks can now use `tools/aris_upstream_sync.py` to keep only one long-lived `main`: first reconcile local `main` with `origin/main`, then check `upstream/main`, validate, and push back to `origin/main`
-- **2026-03-23** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧠 **Repo-local memory + vendor skills** — ARIS now ships `memory/` for workspace-local ideation/experiment memory and `tools/aris_skill_manager.py` for staging third-party skills inside `vendor-skills/` without polluting your global skill directory
+- **2026-03-23** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧠 **Repo-local memory + vendor skills** — ARIS now ships `memory/` for workspace-local ideation/experiment memory and `tools/aris_skill_manager.py` for staging third-party skills inside `vendor-skills/`
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ♻️ **Long-run auto-resume contract** — Workflow 1.5 now treats missing checkpoint / auto-resume support as a correctness blocker for any multi-step or ~10+ minute run. `EXPERIMENT_RUNTIME.json` records output/checkpoint/resume metadata so the next AI session can continue from the latest valid checkpoint
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ⚔️ **Experiment debate loop** — `/experiment-bridge` now defaults to a bounded dual-AI debate loop (`code review mode: debate`) with runtime-review re-entry, structured `EXPERIMENT_DEBATE_LOG.md`, and parseable `EXPERIMENT_RUNTIME.json`
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📋 **[Templates](templates/)** — input templates for every workflow. 📄 **7 venue templates** — CVPR, ACL, AAAI, ACM MM added. 🛡️ **Anti-hallucination fix** — Workflow 2 enforces DBLP → CrossRef → [VERIFY]. 🔗 **`base repo`** — clone a GitHub repo as base codebase (`— base repo: https://github.com/org/project`)
@@ -77,6 +77,8 @@ codex setup                    # set model to gpt-5.4 when prompted
 claude mcp add codex -s user -- codex mcp-server
 
 # 3. Use from the ARIS repo root
+# This repo already ships project-level Claude skills in `.claude/skills/`,
+# so starting Claude from this repo root exposes the main ARIS workflow slash commands directly.
 claude
 > /idea-discovery "your research direction"  # Workflow 1 — be specific! not "NLP" but "factorized gap in discrete diffusion LMs"
 > /experiment-bridge                         # Workflow 1.5 — have a plan? implement + deploy + collect results
@@ -662,7 +664,7 @@ ARIS now supports only **repo workspace mode**:
 
 - keep `skills/`, `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/` inside this repo
 - run entry workflows from this repo root
-- do not copy skills into `~/.claude/skills/` or `~/.codex/skills/`
+- reference skills directly from this checked-out workspace
 
 ### Repo-Local Vendor Skills & Memory
 

@@ -7,7 +7,7 @@
 | 概念 | Claude Code | Trae |
 |---|---|---|
 | Skill 调用 | `/skill-name "args"`（斜杠命令） | 自然语言自动发现、`#` 快速匹配、`@skills/.../SKILL.md`（文件引用） |
-| Skill 存放 | `~/.claude/skills/...` | 全局 `~/.trae/skills/`（跨项目可用）或项目 `<project>/.trae/skills/`（仅当前项目），或直接引用 ARIS 仓库 `skills/` |
+| ARIS 工作区 | 在 ARIS repo 中直接使用 `skills/.../SKILL.md` | 打开 ARIS repo 作为 Trae 工作区，并直接引用 repo 内 `skills/.../SKILL.md` |
 | MCP 配置 | `claude mcp add ...` | `Settings → MCP → 手动添加` |
 | Agent 执行 | 持续 CLI 会话 | Chat/Agent 会话 |
 | 文件引用 | 自动读项目 | `@filename` 显式附加上下文 |
@@ -15,38 +15,17 @@
 
 ## 2. Setup
 最好在trae中创建一个单独的智能体负责运行ARIS工作流，避免与其他智能体冲突，并能给ARIS工作流提供扮演角色的必要信息。
-### 2.1 克隆仓库并配置 Skills
+### 2.1 克隆仓库并将其作为工作区打开
 
 ```powershell
 git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
 ```
 
-**安装 Skills 到 Trae 的两种方式：**
+然后直接把 **这个仓库本身** 作为 Trae 当前工作区打开。
 
-方式一：通过 Trae 界面安装（推荐）
+> **重要：** ARIS 现在只支持 **repo 工作区模式**。`skills/`、`tools/`、`memory/`、`vendor-skills/`、`refine-logs/` 都应保留在克隆出来的 ARIS repo 内，并由 Trae 直接围绕这个工作区运行。
 
-1. 进入 `设置 → 规则和技能`
-2. 选择「全局」或「项目」安装范围
-3. 点击「导入文件」，选择 ARIS 仓库中的 `skills/` 目录下的 SKILL.md 文件
-4. 安装后即可通过自然语言描述触发技能
-
-> **说明：** 全局安装的技能可在所有项目中通过自然语言触发；项目级安装的技能可在该项目中通过自然语言触发。
-
-方式二：手动复制到 skills 目录
-
-```powershell
-# 全局安装（所有项目可用）
-$globalSkillsDir = Join-Path $env:USERPROFILE ".trae\skills"
-New-Item -ItemType Directory -Path $globalSkillsDir -Force | Out-Null
-Copy-Item -Path ".\Auto-claude-code-research-in-sleep\skills\*" -Destination $globalSkillsDir -Recurse -Force
-
-# 项目级安装（仅当前项目可用）
-$projectSkillsDir = ".\.trae\skills"
-New-Item -ItemType Directory -Path $projectSkillsDir -Force | Out-Null
-Copy-Item -Path ".\Auto-claude-code-research-in-sleep\skills\*" -Destination $projectSkillsDir -Recurse -Force
-```
-
-安装完成后，在对应范围内直接用自然语言描述需求即可触发相应技能。
+如果你的 Trae 版本为了技能发现需要显式导入文件，也只导入 **这个 repo 中的 `SKILL.md`**，继续维护这里的原文件即可。
 
 ### 2.2 设置 Codex 审阅 MCP（推荐）
 
@@ -155,7 +134,7 @@ Trae 支持以下五种方式调用 Skills：
 请为「factorized gap in discrete diffusion LMs」运行自动审查循环。
 ```
 
-注意：使用 `@skills/.../SKILL.md` 时，对应的 `skills/` 目录必须在当前 Trae workspace 中可见（例如把 ARIS 仓库或其中的 `skills/` 目录加入当前工作区），否则文件引用会失败。
+注意：使用 `@skills/.../SKILL.md` 时，ARIS repo 必须在当前 Trae workspace 中可见。ARIS 不再支持“先复制一份 skills 到别的目录，再从副本里引用”的安装方式。
 ### D. 高频技能固化为本地规则
 
 将常用技能说明写到项目规则文件，减少每次手动粘贴。
@@ -322,8 +301,8 @@ Deploy: python train.py --lr 1e-4 --epochs 100
 
 ## 10. 迁移清单：Claude Code → Trae
 
-- [ ] 进入 `设置 → 规则和技能`，选择「全局」或「项目」安装范围
-- [ ] 导入 ARIS skills 的 SKILL.md 文件
+- [ ] 打开 ARIS repo 作为当前 Trae 工作区
+- [ ] 直接引用 repo 内的 `skills/.../SKILL.md`，不要复制到其他目录
 - [ ] 在 `Settings → MCP` 配置 MCP 服务器
 - [ ] 使用自然语言描述需求触发技能
 - [ ] 验证 MCP 工具可用（codex 或 llm-chat）

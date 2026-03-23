@@ -13,6 +13,10 @@ Implement, debate, and deploy experiments from plan: **$ARGUMENTS**
 
 Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/`.
 
+## Claude Project Entry
+
+When Claude Code is started from the ARIS repo root, the project-level wrapper at `.claude/skills/experiment-bridge/SKILL.md` exposes `/experiment-bridge`. The canonical implementation remains this file.
+
 ## Overview
 
 This skill bridges Workflow 1 (idea discovery + method refinement) and Workflow 2 (auto review loop). It takes the experiment plan and turns it into running experiments with initial results.
@@ -153,7 +157,7 @@ git clone <BASE_REPO> base_repo/
 For each milestone (in order), write the experiment scripts:
 
 1. **Check existing code** — scan the project (or cloned `base_repo/`) for existing experiment scripts, model code, data loaders. Reuse as much as possible.
-   - Also inspect any relevant repo-local vendor skill staged under `vendor-skills/`. Reuse it locally if it fits, but do not auto-sync it into a global skill directory.
+   - Also inspect any relevant repo-local vendor skill staged under `vendor-skills/`. Reuse it locally if it fits and keep it alongside the rest of this repo-local workflow.
 2. **Implement missing pieces:**
    - training scripts with proper argparse (all hyperparameters configurable)
    - evaluation scripts computing the specified metrics

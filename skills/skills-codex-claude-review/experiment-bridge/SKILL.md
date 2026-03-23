@@ -164,7 +164,7 @@ git clone <BASE_REPO> base_repo/
 For each milestone (in order), write the experiment scripts:
 
 1. **Check existing code** — scan the project (or cloned `base_repo/`) for existing experiment scripts, model code, data loaders. Reuse as much as possible.
-   - Also inspect any relevant repo-local vendor skill staged under `vendor-skills/`. Reuse it locally if it fits, but do not auto-sync it into a global skill directory.
+   - Also inspect any relevant repo-local vendor skill staged under `vendor-skills/`. Reuse it locally if it fits and keep it alongside the rest of this repo-local workflow.
 2. **Implement missing pieces:**
    - training scripts with proper argparse (all hyperparameters configurable)
    - evaluation scripts computing the specified metrics

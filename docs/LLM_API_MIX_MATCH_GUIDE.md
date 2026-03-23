@@ -88,14 +88,14 @@
 
 ### MCP 服务器配置
 
-在 `~/.claude/settings.json` 中添加：
+在 `~/.claude/settings.json` 中添加。`command` 和 `args` 都应该使用**当前 ARIS repo**中的绝对路径：
 
 ```json
 {
   "mcpServers": {
     "llm-chat": {
       "command": "/usr/bin/python3",
-      "args": ["/Users/yourname/.claude/mcp-servers/llm-chat/server.py"],
+      "args": ["/path/to/Auto-claude-code-research-in-sleep/mcp-servers/llm-chat/server.py"],
       "env": {
         "LLM_API_KEY": "your-api-key",
         "LLM_BASE_URL": "https://api.example.com/v1",
@@ -142,9 +142,10 @@
 
 ## 使用方式
 
-```bash
-# 使用通用 LLM 审查 skill
-/auto-review-loop-llm
+在 **当前 ARIS repo 根目录** 中使用 repo-local skill：
+
+```text
+Read skills/auto-review-loop-llm/SKILL.md and run it in this repo workspace.
 ```
 
 ---
@@ -164,11 +165,11 @@ to use mcp__llm-chat__chat instead, following the same pattern.
 
 Claude Code 会自动：
 
-1. 扫描所有 skill 文件，找到使用 Codex MCP 的地方
+1. 扫描当前 ARIS repo 内所有 skill 文件，找到使用 Codex MCP 的地方
 2. 参考 `auto-review-loop-llm` 的写法（MCP 优先 + curl fallback）
-3. 逐个改写到你本地的 `~/.claude/skills/` 目录
+3. 逐个改写当前 repo 内的相关 skill 文件
 
-> ⚠️ **注意：** 这只修改你本地的 skill 副本，不影响仓库原文件。想恢复默认？重新 `cp -r skills/* ~/.claude/skills/` 即可。
+> ⚠️ **注意：** 这会修改当前 ARIS repo 内的 skill 文件。想恢复默认？使用 `git restore skills/`、`git checkout -- skills/`，或重新同步仓库。
 
 ---
 
@@ -198,7 +199,7 @@ Codex CLI 使用 OpenAI 的 **Responses API** (`/v1/responses`)，这个 API 只
   "mcpServers": {
     "llm-chat": {
       "command": "/usr/bin/python3",
-      "args": ["/Users/yourname/.claude/mcp-servers/llm-chat/server.py"],
+        "args": ["/path/to/Auto-claude-code-research-in-sleep/mcp-servers/llm-chat/server.py"],
       "env": {
         "LLM_API_KEY": "your-deepseek-key",
         "LLM_BASE_URL": "https://api.deepseek.com/v1",
@@ -221,7 +222,7 @@ Codex CLI 使用 OpenAI 的 **Responses API** (`/v1/responses`)，这个 API 只
   "mcpServers": {
     "llm-chat": {
       "command": "/usr/bin/python3",
-      "args": ["/Users/yourname/.claude/mcp-servers/llm-chat/server.py"],
+        "args": ["/path/to/Auto-claude-code-research-in-sleep/mcp-servers/llm-chat/server.py"],
       "env": {
         "LLM_API_KEY": "your-kimi-key",
         "LLM_BASE_URL": "https://api.moonshot.cn/v1",
@@ -244,7 +245,7 @@ Codex CLI 使用 OpenAI 的 **Responses API** (`/v1/responses`)，这个 API 只
   "mcpServers": {
     "llm-chat": {
       "command": "/usr/bin/python3",
-      "args": ["/Users/yourname/.claude/mcp-servers/llm-chat/server.py"],
+        "args": ["/path/to/Auto-claude-code-research-in-sleep/mcp-servers/llm-chat/server.py"],
       "env": {
         "LLM_API_KEY": "your-minimax-key",
         "LLM_BASE_URL": "https://api.minimax.chat/v1",

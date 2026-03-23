@@ -9,7 +9,7 @@ Antigravity natively supports `SKILL.md` files with the same YAML frontmatter + 
 | Concept | Claude Code | Antigravity |
 |---------|-------------|-------------|
 | Skill invocation | `/skill-name "args"` (slash command) | Agent auto-discovers from `description`; or read SKILL.md via `view_file` |
-| Skill storage | `~/.claude/skills/skill-name/SKILL.md` | `~/.gemini/antigravity/skills/skill-name/SKILL.md` (global) or `<workspace>/.agents/skills/skill-name/SKILL.md` (project-local) |
+| ARIS workspace | Open the ARIS repo and read repo-local `skills/.../SKILL.md` | Open the ARIS repo as the Antigravity workspace and read repo-local `skills/.../SKILL.md` |
 | MCP servers | `claude mcp add ...` | `~/.gemini/settings.json` → `mcpServers` section |
 | Project instructions | `CLAUDE.md` in project root | `GEMINI.md` in project root (equivalent) |
 | Agent execution | Persistent CLI session, auto-compact | Editor sidebar + Manager View; multi-agent orchestration |
@@ -49,22 +49,16 @@ Antigravity supports multiple models as the **executor** (the model that runs AR
 
 ## 3. Setup
 
-### 3.1 Install skills
+### 3.1 Clone the repo and open it as the workspace
 
 ```bash
 git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
 cd Auto-claude-code-research-in-sleep
-
-# Option A: Global install (available across all projects)
-mkdir -p ~/.gemini/antigravity/skills
-cp -r skills/* ~/.gemini/antigravity/skills/
-
-# Option B: Project-local install (recommended for isolation)
-mkdir -p /path/to/your/project/.agents/skills
-cp -r skills/* /path/to/your/project/.agents/skills/
 ```
 
-> **Important:** Antigravity discovers skills from `~/.gemini/antigravity/skills/` (global) and `<workspace>/.agents/skills/` (project-scoped). The agent sees skill names and descriptions at startup, then loads full SKILL.md content when relevant.
+> **Important:** ARIS now supports only **repo workspace mode**. Keep `skills/`, `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/` inside this cloned repo and let Antigravity work against that workspace directly.
+
+If your Antigravity setup supports explicit skill import, import the `SKILL.md` files **from this repo** and continue maintaining the originals here.
 
 ### 3.2 Set up Codex MCP in Antigravity (for review skills)
 
@@ -167,7 +161,7 @@ Simply describe what you want in the chat. Antigravity matches your intent to in
 Run the auto review loop for "factorized gap in discrete diffusion LMs".
 ```
 
-If ARIS skills are installed (§3.1), Antigravity will automatically discover and activate the `auto-review-loop` skill.
+If the ARIS repo is open as the current workspace (§3.1), Antigravity can discover and activate the `auto-review-loop` skill from the repo-local `skills/` directory.
 
 ### Approach B: Explicit skill reference
 
@@ -175,13 +169,6 @@ Ask the agent to read a specific SKILL.md:
 
 ```
 Read the file skills/auto-review-loop/SKILL.md and follow its instructions.
-Topic: "factorized gap in discrete diffusion LMs".
-```
-
-Or if installed globally:
-
-```
-Read ~/.gemini/antigravity/skills/auto-review-loop/SKILL.md and execute it.
 Topic: "factorized gap in discrete diffusion LMs".
 ```
 
@@ -400,7 +387,8 @@ Deploy: python train.py --lr 1e-4 --epochs 100
 
 ## 12. Summary: Claude Code → Antigravity Migration Checklist
 
-- [ ] Install skills to `~/.gemini/antigravity/skills/` or `<project>/.agents/skills/`
+- [ ] Open the ARIS repo as the current Antigravity workspace
+- [ ] Read repo-local `skills/.../SKILL.md` files directly instead of copying them elsewhere
 - [ ] Configure MCP servers in `~/.gemini/settings.json`
 - [ ] Copy `CLAUDE.md` content to `GEMINI.md` (or keep both)
 - [ ] Select model: Claude Opus 4.6 (Thinking) or Gemini 3.1 Pro (high)

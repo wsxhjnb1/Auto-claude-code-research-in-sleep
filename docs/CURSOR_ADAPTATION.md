@@ -7,7 +7,7 @@
 | Concept | Claude Code | Cursor |
 |---------|-------------|--------|
 | Skill invocation | `/skill-name "args"` (slash command) | Paste instructions or `@`-reference the SKILL.md |
-| Skill storage | `~/.claude/skills/skill-name/SKILL.md` | `.cursor/rules/*.mdc` or reference directly |
+| ARIS workspace | Open the ARIS repo as your working workspace | Open the ARIS repo as your working workspace and reference repo-local `skills/.../SKILL.md` |
 | MCP servers | `claude mcp add ...` | Cursor Settings → Features → MCP, or `.cursor/mcp.json` |
 | Agent execution | Always-on CLI | Agent mode (Ctrl/Cmd+I or chat panel) |
 | File references | Auto-read from project | `@filename` to attach context |
@@ -19,9 +19,10 @@
 
 ```bash
 git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
+cd Auto-claude-code-research-in-sleep
 ```
 
-> **Important:** Open this repo (or add it as a workspace folder) in Cursor. The `@skills/...` references throughout this guide use Cursor's `@`-file feature, which only resolves files within your open workspace. If you work in a separate project, either copy the `skills/` folder into it or add the ARIS repo as a second workspace folder (File → Add Folder to Workspace).
+> **Important:** ARIS now supports only **repo workspace mode**. Open this repo itself in Cursor, or add this repo as a workspace folder in a multi-root workspace. Keep `skills/`, `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/` in this workspace and run ARIS from the repo root.
 
 ### 2.2 Set up Codex MCP in Cursor (for review skills)
 
@@ -33,7 +34,7 @@ ARIS uses an external LLM (GPT-5.4 via Codex) as a critical reviewer. To enable 
    codex login   # authenticate with your ChatGPT or API key
    ```
 
-2. Add MCP server in Cursor — create or edit `.cursor/mcp.json` in your project root:
+2. Add MCP server in Cursor — create or edit `.cursor/mcp.json` in the **ARIS repo root**:
    ```json
    {
      "mcpServers": {
@@ -58,7 +59,7 @@ If you don't have an OpenAI API key, use the [`llm-chat`](../mcp-servers/llm-cha
     .venv/bin/pip install -r mcp-servers/llm-chat/requirements.txt
    ```
 
-2. Add MCP server in Cursor — create or edit `.cursor/mcp.json`. Both paths must be **absolute** — `command` points to the venv python (not system python, otherwise `httpx` won't be found), and `args` points to the server script:
+2. Add MCP server in Cursor — create or edit `.cursor/mcp.json` in the **ARIS repo root**. Both paths must be **absolute** — `command` points to the venv python (not system python, otherwise `httpx` won't be found), and `args` points to the server script:
    ```json
    {
      "mcpServers": {
@@ -97,7 +98,7 @@ Cursor reads the full SKILL.md and follows the instructions. This is the closest
 
 ### Approach B: Convert to Cursor Rules (for frequent use)
 
-For skills you use often, convert them to Cursor Rules so they load automatically:
+For skills you use often, convert the **repo-local** `skills/.../SKILL.md` files into Cursor Rules so they load automatically. Treat `.cursor/rules/*.mdc` as a convenience layer generated from the repo-local skills.
 
 1. Create `.cursor/rules/` in your project root.
 

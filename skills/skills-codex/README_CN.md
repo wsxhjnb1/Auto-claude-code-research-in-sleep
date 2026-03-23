@@ -26,7 +26,7 @@ skills/skills-codex/
 
 ### 2.1 范围控制
 
-本包不是某个全局 `~/.codex/skills` 目录快照，而是 repo 内 `skills/skills-codex/` 的源码视图，只保留：
+本包是 repo 内 `skills/skills-codex/` 的源码视图，只保留：
 
 - 主线 `skills/` 中已有的同名技能
 - 这些技能所需的最小资源目录
@@ -138,7 +138,7 @@ skills/skills-codex/
 
 ### 4.1 工作区模式
 
-不要再把本目录复制到 `~/.codex/skills/`。ARIS 现在只支持 repo 工作区模式：保留当前仓库为 source of truth，并在这个 repo 根目录内运行相关 workflow。
+ARIS 现在只支持 repo 工作区模式：直接在这个 repo 根目录内运行相关 workflow，并使用当前仓库中的 `skills/skills-codex/`。
 
 ```bash
 git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
