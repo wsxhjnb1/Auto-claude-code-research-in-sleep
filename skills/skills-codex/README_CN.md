@@ -5,12 +5,12 @@
 这是一个面向 **Codex** 的技能包目录，当前版本已经与主线 `skills/` 对齐：
 
 - 保留与 `.claude/skills` **同名** 的完整技能集
-- 同步包含主线新增的 `experiment-bridge`、`grant-proposal`、`paper-illustration`
+- 同步包含主线新增的 `experiment-bridge`、`grant-proposal`、`paper-illustration`、`research-memory`
 
 数量对比：
 
-- `.claude/skills` 当前技能数：`31`
-- 本包技能数：`31`
+- `.claude/skills` 当前技能数：`32+`
+- 本包技能数：`32+`
 - 与 `.claude/skills`：一一对应，无额外私有技能
 
 本包路径结构是：

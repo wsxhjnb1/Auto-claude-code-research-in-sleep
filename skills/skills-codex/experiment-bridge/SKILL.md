@@ -32,6 +32,8 @@ The debate loop is default-enabled in v1. It is framework-agnostic at the core, 
 - **LIGHT_PROFILE = true** — Request a short hotspot / memory sample during sanity runs when the stack exposes a clean profiler. Fall back to coarse timing and memory evidence otherwise.
 - **LONG_RUN_RESUME = `required`** — Any experiment that is multi-step or likely to run for 10+ minutes must be resumable. Missing resumeability is a deployment blocker.
 - **LONG_RUN_THRESHOLD = `10min_or_multi_step`** — Classify a run as "long" if it is clearly iterative (training / finetuning / search / long batched generation or evaluation) or likely to exceed roughly 10 minutes.
+- **REPO_LOCAL_MEMORY = true** — Read repo-local experiment memory before redesigning runs or repeating failed runtime fixes.
+- **REPO_LOCAL_VENDOR_SKILLS = true** — Repo-local vendor skills live under `vendor-skills/` and can be reused locally without publishing them globally.
 - **AUTO_DEPLOY = true** — Automatically deploy experiments after implementation + review. Set `false` to manually inspect code before deploying.
 - **SANITY_FIRST = true** — Run the sanity-stage experiment first (smallest, fastest) before launching the rest. Catches setup bugs early.
 - **MAX_PARALLEL_RUNS = 4** — Maximum number of experiments to deploy in parallel (limited by available GPUs).
@@ -53,6 +55,8 @@ This skill expects one or more of:
 2. **`refine-logs/EXPERIMENT_TRACKER.md`** — run-by-run execution table
 3. **`refine-logs/FINAL_PROPOSAL.md`** — method description for implementation context
 4. **`IDEA_REPORT.md`** — fallback if refine-logs don't exist
+5. **`memory/experiment-memory.md`** (optional, recommended) — reusable lessons about bad experiment patterns, proven strategies, resume pitfalls, and metrics lessons
+6. **`vendor-skills/INSTALLED_SKILLS.json`** (optional) — repo-local third-party skills staged for this repo
 
 If none exist, ask the user what experiments to implement.
 
@@ -105,6 +109,8 @@ Read `EXPERIMENT_PLAN.md` and extract:
 3. **Compute budget** — total estimated GPU-hours
 4. **Method details** from `FINAL_PROPOSAL.md` — what exactly to implement
 5. **Workload hints** — whether the plan looks training-heavy, evaluation-heavy, or mixed. Use `WORKLOAD_PROFILE` as the default if nothing more specific is available.
+6. **Repo-local experiment memory** — prior failures, runtime anomalies, and proven fixes from `memory/experiment-memory.md`
+7. **Repo-local vendor skills** — any staged third-party skill under `vendor-skills/` that may help with this repo's implementation or evaluation workflow
 
 Present a brief summary:
 
@@ -131,6 +137,7 @@ git clone <BASE_REPO> base_repo/
 For each milestone (in order), write the experiment scripts:
 
 1. **Check existing code** — scan the project (or cloned `base_repo/`) for existing experiment scripts, model code, data loaders. Reuse as much as possible.
+   - Also inspect any relevant repo-local vendor skill staged under `vendor-skills/`. Reuse it locally if it fits, but do not auto-sync it into a global skill directory.
 2. **Implement missing pieces:**
    - training scripts with proper argparse (all hyperparameters configurable)
    - evaluation scripts computing the specified metrics
@@ -305,6 +312,8 @@ Re-enter review after sanity or deployment if `EXPERIMENT_RUNTIME.json` shows an
 - interrupted run with missing / invalid checkpoint metadata or no reconstructable resume path
 - severe slowdown (for example, throughput far below a comparable baseline / hardware expectation, or a short profile showing the GPU mostly idle)
 
+If the runtime review indicates the experimental design itself is flawed, re-read `memory/experiment-memory.md` before revising the plan. Explicitly avoid repeating a previously recorded bad pattern unless new evidence justifies revisiting it.
+
 Use the existing reviewer agent when available; otherwise spawn a new one. Provide:
 - the relevant experiment-plan block
 - the method description
@@ -359,6 +368,19 @@ As experiments complete:
 
 ### Phase 6: Handoff
 
+Before the final handoff, write a short reflection that answers:
+
+1. What actually worked in implementation or deployment?
+2. Which experiment design or runtime pattern should not be repeated?
+3. Which fix or baseline should be reused first next time?
+4. Does the next-stage review plan need to change?
+
+Then update repo-local experiment memory:
+
+```text
+/research-memory "experiment"
+```
+
 Present final status:
 
 ```
@@ -404,5 +426,8 @@ Ready for Workflow 2:
 - **Prefer stable run roots.** New experiment code should default to `results/<run_name>/`, with `checkpoints/` and `RUN_STATE.json` underneath unless the project already has a stronger native convention.
 - **Do not auto-switch frameworks.** A suggestion to use a different backend belongs in the debate log until explicitly accepted for a future change.
 - **Do not recommend Triton / CUDA casually.** Require hotspot evidence, a fallback path, and an expected gain statement.
+- **Read `memory/experiment-memory.md` before redesigning experiments or repeating a runtime fix.**
+- **Treat repo-local vendor skills as workspace-only by default.** Only explicit `tools/aris_skill_manager.py sync-global` should publish them to `~/.codex/skills/` or `~/.claude/skills/`.
+- **Reflection + memory update is part of the Workflow 1.5 contract** after major result snapshots, runtime anomalies, or design pivots.
 - **Document the reviewer agent id** for future resumption.
 - **Budget awareness.** Track GPU-hours against the plan's budget and warn when approaching the limit.

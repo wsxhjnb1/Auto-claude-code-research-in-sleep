@@ -13,6 +13,8 @@ End-to-end autonomous research workflow for: **$ARGUMENTS**
 - **ARXIV_DOWNLOAD = false**
 - **HUMAN_CHECKPOINT = false**
 - **ILLUSTRATION = `ai`**
+- **REPO_LOCAL_MEMORY = true**
+- **REPO_LOCAL_VENDOR_SKILLS = true**
 
 ## Overview
 
@@ -21,6 +23,16 @@ This skill now orchestrates the full lifecycle:
 ```text
 /idea-discovery → /experiment-bridge → /auto-review-loop → narrative synthesis → /paper-writing → submission-ready artifacts
 ```
+
+### Stage 0: Repo-Local Context Intake
+
+Before Workflow 1 starts, read these files if they exist:
+
+- `memory/ideation-memory.md`
+- `memory/experiment-memory.md`
+- `vendor-skills/INSTALLED_SKILLS.json`
+
+Use them to avoid repeating failed directions, reuse proven experiment strategies, and discover any repo-local vendor skills that may be relevant. Do not auto-sync repo-local vendor skills into `~/.codex/skills/` or `~/.claude/skills/`.
 
 ## Pipeline
 
@@ -37,6 +49,12 @@ Output:
 - `refine-logs/EXPERIMENT_PLAN.md`
 - `refine-logs/EXPERIMENT_TRACKER.md`
 
+After Workflow 1 converges, run a short reflection and update repo-local ideation memory:
+
+```text
+/research-memory "ideation"
+```
+
 ### Stage 2: Experiment Bridge
 
 ```text
@@ -49,6 +67,14 @@ Output:
 - `refine-logs/EXPERIMENT_RUNTIME.json`
 - `refine-logs/EXPERIMENT_DEBATE_LOG.md`
 
+If the user asks to redesign experiments midstream, re-read `memory/experiment-memory.md` before re-entering `/experiment-bridge`.
+
+After Workflow 1.5 reaches a stable result snapshot or a design pivot, update repo-local experiment memory:
+
+```text
+/research-memory "experiment"
+```
+
 ### Stage 3: Auto Review Loop
 
 ```text
@@ -58,6 +84,12 @@ Output:
 Output:
 
 - `AUTO_REVIEW.md`
+
+After each major review-loop convergence or reviewer-forced plan change, refresh repo-local memory:
+
+```text
+/research-memory "review"
+```
 
 ### Stage 4: Narrative Synthesis
 
@@ -90,6 +122,9 @@ Output:
 
 ## Key Rules
 
+- Read repo-local memory before starting and before any experiment redesign.
+- Keep `vendor-skills/` repo-local by default; only `tools/aris_skill_manager.py sync-global` should publish a vendor skill into a global skill directory.
+- Treat reflection + memory update as part of the pipeline contract, not an optional note-taking step.
 - Use `/experiment-bridge`, not a free-form implementation step.
 - `AUTO_REVIEW.md` is canonical.
 - The pipeline continues through Workflow 3 unless blocked.

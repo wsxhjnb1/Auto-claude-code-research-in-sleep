@@ -28,6 +28,7 @@ Custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skills for 
 
 ## 📢 What's New
 
+- **2026-03-23** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧠 **Repo-local memory + vendor skills** — ARIS now ships `memory/` for workspace-local ideation/experiment memory and `tools/aris_skill_manager.py` for staging third-party skills inside `vendor-skills/` without polluting your global skill directory
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ♻️ **Long-run auto-resume contract** — Workflow 1.5 now treats missing checkpoint / auto-resume support as a correctness blocker for any multi-step or ~10+ minute run. `EXPERIMENT_RUNTIME.json` records output/checkpoint/resume metadata so the next AI session can continue from the latest valid checkpoint
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ⚔️ **Experiment debate loop** — `/experiment-bridge` now defaults to a bounded dual-AI debate loop (`code review mode: debate`) with runtime-review re-entry, structured `EXPERIMENT_DEBATE_LOG.md`, and parseable `EXPERIMENT_RUNTIME.json`
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📋 **[Templates](templates/)** — input templates for every workflow. 📄 **7 venue templates** — CVPR, ACL, AAAI, ACM MM added. 🛡️ **Anti-hallucination fix** — Workflow 2 enforces DBLP → CrossRef → [VERIFY]. 🔗 **`base repo`** — clone a GitHub repo as base codebase (`— base repo: https://github.com/org/project`)
@@ -122,9 +123,11 @@ See [full setup guide](#%EF%B8%8F-setup) for details and [alternative model comb
 
 ## ✨ Features
 
-- 📊 **31 composable skills** — mix and match, or chain into full pipelines (`/idea-discovery`, `/auto-review-loop`, `/paper-writing`, `/research-pipeline`)
+- 📊 **32+ composable skills** — mix and match, or chain into full pipelines (`/idea-discovery`, `/auto-review-loop`, `/paper-writing`, `/research-pipeline`)
 - 🔍 **Literature & novelty** — multi-source paper search (**[Zotero](#-zotero-integration-optional)** + **[Obsidian](#-obsidian-integration-optional)** + **local PDFs** + arXiv/Scholar) + cross-model novelty verification
 - 💡 **Idea discovery** — literature survey → brainstorm 8-12 ideas → novelty check → GPU pilot experiments → ranked report
+- 🧠 **Repo-local research memory** — `memory/ideation-memory.md` and `memory/experiment-memory.md` capture reusable lessons, not just logs, and are read before new searches / redesigns
+- 📦 **Repo-local vendor skill staging** — `tools/aris_skill_manager.py` installs third-party skills into `vendor-skills/` first; only explicit `sync-global` publishes them into `~/.codex/skills/` or `~/.claude/skills/`
 - 🔄 **Auto review loop** — 4-round autonomous review, 5/10 → 7.5/10 overnight with 20+ GPU experiments
 - 📝 **Paper writing** — narrative → outline → figures → LaTeX → PDF → auto-review (4/10 → 8.5/10), one command. Anti-hallucination citations via [DBLP](https://dblp.org)/[CrossRef](https://www.crossref.org)
 - 🤖 **Cross-model collaboration** — Claude Code executes, GPT-5.4 xhigh reviews. Adversarial, not self-play
@@ -271,6 +274,8 @@ Don't have a concrete idea yet? Just give a research direction — `/idea-discov
 
 The output is a ranked `IDEA_REPORT.md` plus a refined proposal (`refine-logs/FINAL_PROPOSAL.md`) and experiment plan (`refine-logs/EXPERIMENT_PLAN.md`) for the top idea. Dead-end ideas are documented too, saving future exploration.
 
+Repo-local memory is part of the contract now: `/idea-discovery` reads `memory/ideation-memory.md` before the next search / regeneration pass and refreshes it through `/research-memory` after top-idea selection, major eliminations, and reviewer-driven scope changes.
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │              Idea Discovery & Method Refinement                  │
@@ -346,6 +351,8 @@ Already have an experiment plan (from Workflow 1 or your own)? `/experiment-brid
 5. 🚀 **Deploy** full experiment suite to GPU via `/run-experiment`
 6. 📊 **Collect** initial results plus runtime evidence and update the experiment tracker
 
+Workflow 1.5 now also reads `memory/experiment-memory.md` before experiment redesigns and can reuse repo-local third-party skills staged in `vendor-skills/`. The staged skills stay local to this repo unless you explicitly run `python3 tools/aris_skill_manager.py sync-global --target auto`.
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                Workflow 1.5: Experiment Bridge                    │
@@ -409,6 +416,8 @@ Already have an experiment plan (from Workflow 1 or your own)? `/experiment-brid
 │   /monitor-experiment — check progress, collect results      │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+Each major round now ends with a short reflection and a `/research-memory "review"` update so reusable reviewer objections, bad experiment patterns, and proven fixes survive beyond the current thread.
 
 **Skills involved:** `auto-review-loop` + `research-review` + `novelty-check` + `run-experiment` + `analyze-results` + `monitor-experiment`
 
@@ -582,6 +591,13 @@ After Workflow 3 generates the paper, `/auto-paper-improvement-loop` runs 2 roun
 | └ 👀 [`monitor-experiment`](skills/monitor-experiment/SKILL.md) | Monitor running experiments, report latest checkpoint / progress, and tell you whether resume is available | No |
 | 🔁 [`auto-review-loop-llm`](skills/auto-review-loop-llm/SKILL.md) | Same as above, but uses any OpenAI-compatible API via [`llm-chat`](mcp-servers/llm-chat/) MCP server | No |
 
+### 🧠 Repo-Local Memory & Extensions
+
+| Skill / Tool | Description | Codex MCP? |
+|-------|-------------|:---:|
+| 🧠 [`research-memory`](skills/research-memory/SKILL.md) | Repo-local reflection + memory update for ideation, experiment, and review lessons. Writes to `memory/` and keeps reusable heuristics out of raw logs | No |
+| 📦 [`tools/aris_skill_manager.py`](tools/aris_skill_manager.py) | Install third-party skills into `vendor-skills/`, inspect them, uninstall them, or explicitly sync selected ones to `~/.codex/skills/` / `~/.claude/skills/` | No |
+
 ### 📝 Workflow 3: Paper Writing
 
 | Skill | Description | Codex MCP? |
@@ -645,6 +661,32 @@ cp -r skills/* ~/.claude/skills/
 cp -r skills/auto-review-loop ~/.claude/skills/
 cp -r skills/research-lit ~/.claude/skills/
 ```
+
+### Repo-Local Vendor Skills & Memory
+
+ARIS now supports repo-local extensions without touching your global skill directory first:
+
+```bash
+# Stage a third-party skill inside this repo only
+python3 tools/aris_skill_manager.py install --source /abs/path/to/skill-dir
+
+# Or install from a public GitHub repo
+python3 tools/aris_skill_manager.py install --source owner/repo@skill-name
+
+# Inspect local staged skills
+python3 tools/aris_skill_manager.py list
+python3 tools/aris_skill_manager.py info --name skill-name
+
+# Publish selected repo-local skills to the real global directory only when you mean it
+python3 tools/aris_skill_manager.py sync-global --target auto
+```
+
+Repo-local memory lives under `memory/`:
+
+- `memory/ideation-memory.md`
+- `memory/experiment-memory.md`
+
+Deleting this repo deletes `vendor-skills/` and `memory/` with it. Only skills explicitly synced into `~/.codex/skills/` or `~/.claude/skills/` survive outside the repo.
 
 ### Update Skills
 

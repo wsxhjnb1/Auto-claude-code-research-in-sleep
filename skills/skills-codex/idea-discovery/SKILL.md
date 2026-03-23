@@ -18,6 +18,13 @@ This skill chains sub-skills into a single automated pipeline:
 
 Each phase builds on the previous one's output. The final deliverables are a validated `IDEA_REPORT.md` with ranked ideas, plus a refined proposal (`refine-logs/FINAL_PROPOSAL.md`) and experiment plan (`refine-logs/EXPERIMENT_PLAN.md`) for the top idea.
 
+Before Phase 1, read these repo-local files if they exist:
+
+- `memory/ideation-memory.md`
+- `vendor-skills/INSTALLED_SKILLS.json`
+
+Use them to bias search away from already-killed directions and to surface any repo-local skills that may help with domain-specific literature or ideation work.
+
 ## Constants
 
 - **PILOT_MAX_HOURS = 2** — Skip any pilot experiment estimated to take > 2 hours per GPU. Flag as "needs manual pilot" in the report.
@@ -92,6 +99,8 @@ Which ideas should I validate further? Or should I regenerate with different con
 - **User unhappy with all ideas** → collect feedback ("what's missing?", "what direction do you prefer?"), update the prompt with user's constraints, and re-run Phase 2 (idea generation). Repeat until the user selects at least 1 idea.
 - **User wants to adjust scope** → go back to Phase 1 with refined direction.
 
+Before regenerating a failed batch of ideas, write a short reflection on why the previous batch failed and update `memory/ideation-memory.md` via `/research-memory "ideation"` if the rejection exposed reusable lessons.
+
 ### Phase 3: Deep Novelty Verification
 
 For each top idea (positive pilot signal), run a thorough novelty check:
@@ -155,6 +164,21 @@ Proceed to implementation? Or adjust the proposal?
 - **User requests changes** → pass feedback to `/research-refine` for another round.
 - **Lite mode:** If reviewer score < 6 or pilot was weak, run `/research-refine` only (skip `/experiment-plan`) and note remaining risks in the report.
 
+### Phase 4.75: Reflection + Ideation Memory
+
+Before finalizing the report, run a short reflection that answers:
+
+1. What direction looks most promising now?
+2. Which directions or filters clearly failed?
+3. Which reviewer objections should shape the next round?
+4. Should the next-stage plan change?
+
+Then update repo-local ideation memory:
+
+```text
+/research-memory "ideation"
+```
+
 ### Phase 5: Final Report
 
 Finalize `IDEA_REPORT.md` with all accumulated information:
@@ -207,6 +231,7 @@ Finalize `IDEA_REPORT.md` with all accumulated information:
 - **Kill ideas early.** It's better to kill 10 bad ideas in Phase 3 than to implement one and fail.
 - **Empirical signal > theoretical appeal.** An idea with a positive pilot outranks a "sounds great" idea without evidence.
 - **Document everything.** Dead ends are just as valuable as successes for future reference.
+- **Persist reusable lessons.** After top-idea selection, major idea elimination, or reviewer-forced scope changes, refresh `memory/ideation-memory.md`.
 - **Be honest with the reviewer.** Include negative results and failed pilots in the review prompt.
 - **Feishu notifications are optional.** If `~/.codex/feishu.json` exists, send `checkpoint` at each phase transition and `pipeline_done` at final report. If absent/off, skip silently.
 

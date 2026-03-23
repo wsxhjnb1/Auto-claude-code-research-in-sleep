@@ -55,7 +55,9 @@ Long-running loops may hit the context window limit, triggering automatic compac
      - If `pending_experiments` is non-empty, check if they have completed (e.g., check screen sessions)
      - Resume from the next round (round = saved round + 1)
      - Log: "Recovered from context compaction. Resuming at Round N."
-2. Read project narrative documents, memory files, and any prior review documents
+2. Read project narrative documents, repo-local memory files, and any prior review documents
+   - `memory/ideation-memory.md`
+   - `memory/experiment-memory.md`
 3. Read recent experiment results (check output directories, logs)
 4. Identify current weaknesses and open TODOs from prior reviews
 5. Initialize round counter = 1 (unless recovered from state file)
@@ -195,6 +197,19 @@ This is the authoritative record. Do NOT truncate or paraphrase.]
 
 **Write `REVIEW_STATE.json`** with current round, agent id, score, verdict, and any pending experiments.
 
+Write a short reflection in working notes:
+
+- what this round taught us
+- which fix or experiment should not be repeated
+- which strategy should be reused first next round
+- whether the downstream plan changed
+
+Then refresh repo-local memory:
+
+```text
+/research-memory "review"
+```
+
 Increment round counter → back to Phase A.
 
 ### Termination
@@ -204,11 +219,12 @@ When loop ends (positive assessment or max rounds):
 1. Update `REVIEW_STATE.json` with `"status": "completed"`
 2. Write final summary to `AUTO_REVIEW.md`
 3. Update project notes with conclusions
-4. If stopped at max rounds without positive assessment:
+4. Run one final reflection + `/research-memory "review"` update so the repo-local memory records the strongest reviewer objections, proven fixes, and experiment lessons
+5. If stopped at max rounds without positive assessment:
    - List remaining blockers
    - Estimate effort needed for each
    - Suggest whether to continue manually or pivot
-5. **Feishu notification** (if configured): Send `pipeline_done` with final score progression table
+6. **Feishu notification** (if configured): Send `pipeline_done` with final score progression table
 
 ## Key Rules
 
@@ -220,6 +236,7 @@ When loop ends (positive assessment or max rounds):
 - Do NOT hide weaknesses to game a positive score
 - Implement fixes BEFORE re-reviewing (don't just promise to fix)
 - If an experiment takes > 30 minutes, launch it and continue with other fixes while waiting
+- Update repo-local memory after each round; do not let reusable reviewer lessons live only in the thread context
 - Document EVERYTHING — the review log should be self-contained
 - Update project notes after each round, not just at the end
 

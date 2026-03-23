@@ -31,9 +31,6 @@ Generate all figures and tables for a paper based on: **$ARGUMENTS**
 - **FONT_SIZE = 10** — Base font size (matches typical conference body text)
 - **FIG_DIR = `figures/`** — Output directory for generated figures
 - **REVIEWER_MODEL = `claude-review`** — Claude reviewer invoked through the local `claude-review` MCP bridge. Set `CLAUDE_REVIEW_MODEL` if you need a specific Claude model override.
-- **PAPER_AUTO_INSTALL = true** — Auto-bootstrap Workflow 3 dependencies on first run.
-- **PAPER_VENV_DIR = `.venv`** — Project-local Python environment for paper tooling.
-- **PAPER_SYSTEM_INSTALL = `auto`** — Auto-install supported system packages via `apt-get` or `brew`.
 
 ## Inputs
 
@@ -69,7 +66,7 @@ python3 tools/ensure_paper_runtime.py --phase figure
 PAPER_PY=.venv/bin/python
 ```
 
-Use `PAPER_PY` for any generated plotting scripts. Do not assume bare `python3` sees the project-local packages.
+Use `PAPER_PY` for generated plotting scripts.
 
 ### Step 2: Set Up Plotting Environment
 
@@ -187,7 +184,7 @@ Method & Rate & Depends on $D$? & Multi-modal? \\
 ```bash
 # Run all figure generation scripts
 for script in gen_fig*.py; do
-    "$PAPER_PY" "$script"
+    $PAPER_PY "$script"
 done
 ```
 
