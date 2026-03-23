@@ -2,7 +2,7 @@
 
 [中文版](SESSION_RECOVERY_GUIDE_CN.md) | English
 
-> How to maintain project state across sessions and context compaction in ARIS workflows — the core design is **Pipeline Status in your project CLAUDE.md**, with optional Claude Code hooks for automation.
+> How to maintain project state across sessions and context compaction in ARIS workflows — the core design is **Pipeline Status in `research/<slug>/CLAUDE.md`**, with repo-root `CLAUDE.md` as shared defaults and optional Claude Code hooks for automation.
 
 ## Why Session Recovery Matters
 
@@ -15,11 +15,11 @@ ARIS already persists some state to files inside the active research workspace (
 
 ## The Core Solution: Pipeline Status
 
-The single most important thing you can do is maintain a **`## Pipeline Status`** section in your project's `CLAUDE.md`. This is a lightweight, structured snapshot of "where the project is right now" — readable in 30 seconds, enough for any LLM to resume work.
+The single most important thing you can do is maintain a **`## Pipeline Status`** section in your research workspace `CLAUDE.md` (`research/<slug>/CLAUDE.md`). This is a lightweight, structured snapshot of "where the project is right now" — readable in 30 seconds, enough for any LLM to resume work. Repo-root `CLAUDE.md`, if present, should only hold shared defaults such as server or paper-library settings.
 
 ### What Pipeline Status Contains
 
-Add this to your project `CLAUDE.md`:
+Add this to `research/<slug>/CLAUDE.md`:
 
 ```yaml
 ## Pipeline Status
@@ -72,7 +72,7 @@ After Workflow 1 (`/idea-discovery`), `IDEA_REPORT.md` contains 8-12 candidate i
 
 **New session or post-compaction**, the LLM reads in this order:
 
-1. `CLAUDE.md` → `## Pipeline Status` (30-second orientation)
+1. `research/<slug>/CLAUDE.md` → `## Pipeline Status` (30-second orientation)
 2. `docs/research_contract.md` (focused context for the active idea — not the full IDEA_REPORT)
 3. Project notes or log files, if you maintain any (restore debugging context, decision rationale)
 4. If `active_tasks`/`training_status` is non-empty → check remote sessions, rebuild monitoring
@@ -81,7 +81,7 @@ This works on **any platform** (Claude Code, Cursor, Trae, Codex CLI, OpenClaw) 
 
 ### Recommended CLAUDE.md Rules
 
-Add these rules to your project `CLAUDE.md` so the LLM knows when and how to maintain state:
+Add these rules to `research/<slug>/CLAUDE.md` so the LLM knows when and how to maintain state:
 
 ```markdown
 ## State Persistence Rules

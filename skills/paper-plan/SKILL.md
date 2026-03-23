@@ -16,6 +16,8 @@ Resolve the active research workspace before reading inputs or writing the outli
 ```bash
 RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage paper-plan --arguments "$ARGUMENTS" --print-path)"
 echo "Using research workspace: $RESEARCH_ROOT"
+PROJECT_CLAUDE="$(python3 tools/aris_claude_file.py ensure --workspace-root "$RESEARCH_ROOT" --print-path)"
+echo "Using project CLAUDE.md: $PROJECT_CLAUDE"
 ```
 
 Treat narrative files, review artifacts, figures, and the generated paper plan as relative to `$RESEARCH_ROOT` unless the user explicitly supplies an absolute path or a `research/...` path.

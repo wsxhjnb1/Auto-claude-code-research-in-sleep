@@ -109,7 +109,7 @@ claude
 > | `optimization review` | `true` | 第二个 pass 显式审查框架 / 后端 / 显存 / 吞吐优化机会 |
 > | `workload profile` | `mixed` | 提示当前负载更偏 `training`、`inference` 或 `mixed`，避免给出不保语义的后端建议 |
 > | `light profile` | `true` | sanity 阶段在栈支持时请求短时热点 / 显存采样；否则回落到粗粒度运行时证据 |
-> | `wandb` | `false` | 自动给实验脚本加 W&B 日志。设 `true` + 在 CLAUDE.md 配 `wandb_project`。`/monitor-experiment` 从 W&B 拉训练曲线 |
+> | `wandb` | `false` | 自动给实验脚本加 W&B 日志。设 `true` + 在当前 research workspace 的 `CLAUDE.md`（`research/<slug>/CLAUDE.md`，repo 根 `CLAUDE.md` 仅作 fallback）里配 `wandb_project`。`/monitor-experiment` 从 W&B 拉训练曲线 |
 > | `illustration` | `ai` | 工作流 3 AI 作图：`ai`（默认，PaperBanana 风格运行时，浏览器优先的 Gemini 网页端渲染）、`mermaid`（免费）、`false`（跳过） |
 > | `illustration backend` | `browser` | `illustration: ai` 的后端：`browser`（默认，独立 Gemini 网页 profile）或 `api`（显式备用） |
 > | `venue` | `ICLR` | 目标会议：`ICLR`、`NeurIPS`、`ICML`、`CVPR`、`ACL`、`AAAI`、`ACM`。决定 LaTeX 样式和页数限制 |
@@ -141,7 +141,7 @@ claude
 - 📝 **论文写作** — 研究叙事 → 大纲 → 图表 → LaTeX → PDF → 自动审稿（4/10 → 8.5/10），一条命令。通过 [DBLP](https://dblp.org)/[CrossRef](https://www.crossref.org) 反幻觉引用
 - 🤖 **跨模型协作** — Claude Code 执行，GPT-5.4 xhigh 审稿。对抗式而非自我博弈
 - 📝 **Peer Review** — 以审稿人视角审阅他人论文，结构化打分 + meta-review
-- 🖥️ **审稿驱动实验** — `experiment-bridge` 现在会在部署前运行有界的“执行者 vs 审查者”辩论循环，写出 `EXPERIMENT_RUNTIME.json`，并在阻塞级运行时失败后重新进入 review；对长任务，缺 checkpoint / auto-resume 会被当成正确性 blocker。只需在 `CLAUDE.md` 里配好服务器信息（[配置指南](#%EF%B8%8F-gpu-服务器配置自动实验用)）
+- 🖥️ **审稿驱动实验** — `experiment-bridge` 现在会在部署前运行有界的“执行者 vs 审查者”辩论循环，写出 `EXPERIMENT_RUNTIME.json`，并在阻塞级运行时失败后重新进入 review；对长任务，缺 checkpoint / auto-resume 会被当成正确性 blocker。只需在当前 research workspace 的 `CLAUDE.md`（`research/<slug>/CLAUDE.md`，repo 根 `CLAUDE.md` 仅作 fallback）里配好服务器信息（[配置指南](#%EF%B8%8F-gpu-服务器配置自动实验用)）
 - 🔀 **灵活模型** — 默认 Claude × GPT-5.4，也支持 [GLM、MiniMax、Kimi、LongCat、DeepSeek 等](#-替代模型组合)——无需 Claude 或 OpenAI API
 - 🛑 **Human-in-the-loop** — 关键决策点可配置检查点。`AUTO_PROCEED=true` 全自动，`false` 逐步审批
 - 📱 **[飞书通知](#-飞书lark-集成可选)** — 三种模式：**关闭（默认，强烈建议大多数用户保持关闭）**、仅推送（webhook，手机收通知）、双向交互（在飞书里审批/回复）。未配置时零影响
@@ -356,7 +356,7 @@ Workflow 1.5 现在也会在重设计实验前先读 `memory/experiment-memory.m
 
 > "帮我 review 论文，修复问题，循环到通过为止。"
 >
-> GPT-5.4 审稿 → 定位弱点 → 建议实验 → Claude Code 自动写脚本、部署到 GPU、监控结果、改写论文——你睡觉就行。只需在 `CLAUDE.md` 里配好[GPU 服务器信息](#%EF%B8%8F-gpu-服务器配置自动实验用)。
+> GPT-5.4 审稿 → 定位弱点 → 建议实验 → Claude Code 自动写脚本、部署到 GPU、监控结果、改写论文——你睡觉就行。只需在当前 research workspace 的 `CLAUDE.md` 里配好[GPU 服务器信息](#%EF%B8%8F-gpu-服务器配置自动实验用)。
 
 **涉及 Skills：** `auto-review-loop` + `research-review` + `novelty-check` + `run-experiment` + `analyze-results` + `monitor-experiment`
 
@@ -710,7 +710,9 @@ python3 tools/aris_upstream_sync.py sync
 
 当 GPT-5.4 审稿说"需要补一个消融实验"或"加一个 baseline 对比"时，Claude Code 会自动写实验脚本并部署到你的 GPU 服务器。为此，Claude Code 需要知道你的服务器环境。
 
-在项目的 `CLAUDE.md` 中添加服务器信息：
+每个 research workspace 都有自己的 canonical `CLAUDE.md`，路径是 `research/<slug>/CLAUDE.md`。第一次进入该 workspace 的 Claude 工作流时会自动生成它。如果你另外保留 repo 根 `CLAUDE.md`，ARIS 会把它当作共享默认值和缺失字段的 fallback。
+
+在当前 research workspace 的 `CLAUDE.md` 中添加服务器信息：
 
 ```markdown
 ## 远程服务器
@@ -723,9 +725,9 @@ python3 tools/aris_upstream_sync.py sync
 - 后台运行用 `screen`：`screen -dmS exp0 bash -c '...'`
 ```
 
-Claude Code 读到这些就知道怎么 SSH、激活环境、启动实验。GPT-5.4（审稿人）只决定**做什么实验**——Claude Code 根据你的 `CLAUDE.md` 搞定**怎么跑**。
+Claude Code 会优先读取当前 research workspace 的 `CLAUDE.md`，只有共享字段缺失时才回退到 repo 根 `CLAUDE.md`。GPT-5.4（审稿人）只决定**做什么实验**——Claude Code 根据这份项目级配置搞定**怎么跑**。
 
-如果你已经在 GPU 服务器上，可以添加以下到你的 `CLAUDE.md`：
+如果你已经在 GPU 服务器上，可以添加以下到当前 research workspace 的 `CLAUDE.md`：
 ```markdown
 ## GPU 环境
 
@@ -1093,7 +1095,7 @@ Skills 就是普通的 Markdown 文件，fork 后随意改：
 | `AUTO_DEPLOY` | true | 实现 + 审查后自动部署。设 `false` 可手动检查 |
 | `SANITY_FIRST` | true | 先跑最小实验，提前发现 bug |
 | `MAX_PARALLEL_RUNS` | 4 | 最多并行部署几个实验（受可用 GPU 限制） |
-| `WANDB` | false | 自动加 W&B 日志。需在 CLAUDE.md 配 `wandb_project` |
+| `WANDB` | false | 自动加 W&B 日志。需在当前 research workspace 的 `CLAUDE.md` 中配 `wandb_project` |
 | `BASE_REPO` | false | GitHub 仓库 URL，把当前 active research workspace 直接 hydrate 成 git-backed 代码仓库 |
 
 行内覆盖：`/experiment-bridge — code review mode: single, workload profile: inference, base repo: https://github.com/org/project`

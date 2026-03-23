@@ -11,6 +11,18 @@ Experiments produce numbers; this gate decides what those numbers *mean*. Collec
 
 ## Context: $ARGUMENTS
 
+## Research Workspace
+
+If this call belongs to an active ARIS research workspace, ensure the project-level `CLAUDE.md` first:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py status --print-path 2>/dev/null || true)"
+if [ -n "$RESEARCH_ROOT" ]; then
+  PROJECT_CLAUDE="$(python3 tools/aris_claude_file.py ensure --workspace-root "$RESEARCH_ROOT" --print-path)"
+  echo "Using project CLAUDE.md: $PROJECT_CLAUDE"
+fi
+```
+
 ## When to Use
 
 - After a set of experiments completes (main results, not just sanity checks)
@@ -95,7 +107,7 @@ Extract structured fields from Codex response:
 1. Record postmortem in findings.md (Research Findings section):
    - What was tested, what failed, hypotheses for why
    - Constraints for future attempts (what NOT to try again)
-2. Update CLAUDE.md Pipeline Status
+2. Update the project-level `CLAUDE.md` Pipeline Status (`$RESEARCH_ROOT/CLAUDE.md` when a research workspace is active)
 3. Decide whether to pivot to next idea from IDEA_CANDIDATES.md or try an alternative approach
 
 #### `partial` — Claim partially supported

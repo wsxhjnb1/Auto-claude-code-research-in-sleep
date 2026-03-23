@@ -17,6 +17,8 @@ Resolve the active research workspace before compilation:
 RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage paper-compile --arguments "$ARGUMENTS" --print-path)"
 PAPER_DIR="${ARGUMENTS:-$RESEARCH_ROOT/paper}"
 echo "Using research workspace: $RESEARCH_ROOT"
+PROJECT_CLAUDE="$(python3 tools/aris_claude_file.py ensure --workspace-root "$RESEARCH_ROOT" --print-path)"
+echo "Using project CLAUDE.md: $PROJECT_CLAUDE"
 ```
 
 When the user does not pass an explicit paper path, compile `$RESEARCH_ROOT/paper/`.

@@ -26,6 +26,8 @@ Resolve the active research workspace before Initialization:
 ```bash
 RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage auto-review-loop --arguments "$ARGUMENTS" --print-path)"
 echo "Using research workspace: $RESEARCH_ROOT"
+PROJECT_CLAUDE="$(python3 tools/aris_claude_file.py ensure --workspace-root "$RESEARCH_ROOT" --print-path)"
+echo "Using project CLAUDE.md: $PROJECT_CLAUDE"
 ```
 
 Behavior:

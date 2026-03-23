@@ -25,7 +25,11 @@ Resolve the active research workspace before launch:
 ```bash
 RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage run-experiment --arguments "$ARGUMENTS" --print-path)"
 echo "Using research workspace: $RESEARCH_ROOT"
+PROJECT_CLAUDE="$(python3 tools/aris_claude_file.py ensure --workspace-root "$RESEARCH_ROOT" --print-path)"
+echo "Using project CLAUDE.md: $PROJECT_CLAUDE"
 ```
+
+Use `$RESEARCH_ROOT/CLAUDE.md` as the canonical project file. If repo-root `CLAUDE.md` exists, only use it as shared defaults and fallback for missing shared fields such as server, code sync, W&B, or paper-library configuration. Never inherit `## Pipeline Status` from the repo root.
 
 All experiment artifacts belong under that workspace:
 
@@ -39,13 +43,13 @@ Repo-level runtime such as `.venv/`, `.claude/`, and repo-level sync/browser sta
 
 ### Step 1: Detect Environment
 
-Read the project's `CLAUDE.md` to determine the experiment environment:
+Read the active research workspace `CLAUDE.md` (`$RESEARCH_ROOT/CLAUDE.md`) to determine the experiment environment. Only if a shared field is missing there should you fall back to repo-root `CLAUDE.md`:
 
 - **Local GPU**: look for local CUDA / MPS setup info
 - **Remote server**: look for SSH alias, conda env, code directory
 - **Profiling hints**: look for profiler guidance or restrictions
 
-If no server info is found in `CLAUDE.md`, ask the user.
+If no server info is found in either location, ask the user.
 
 ### Step 2: Pre-flight Check
 
@@ -79,7 +83,7 @@ If a run is long, it is not launchable until the code exposes:
 
 ### Step 3: Sync Code (Remote Only)
 
-Check the project's `CLAUDE.md` for a `code_sync` setting. If not specified, default to `rsync`.
+Check the active research workspace `CLAUDE.md` for a `code_sync` setting, then fall back to repo-root `CLAUDE.md`. If not specified, default to `rsync`.
 
 #### Option A: rsync (default)
 
@@ -88,7 +92,7 @@ Only sync necessary files — NOT data, checkpoints, or large files:
 rsync -avz --include='*.py' --exclude='*' <local_src>/ <server>:<remote_dst>/
 ```
 
-#### Option B: git (when `code_sync: git` is set in CLAUDE.md)
+#### Option B: git (when `code_sync: git` is set in the project-level `CLAUDE.md`)
 
 Push local changes to remote repo, then pull on the server:
 ```bash
@@ -101,9 +105,9 @@ ssh <server> "cd <remote_dst> && git pull"
 
 Benefits: version-tracked, multi-server sync with one push, no rsync include / exclude rules needed.
 
-### Step 3.5: W&B Integration (when `wandb: true` in CLAUDE.md)
+### Step 3.5: W&B Integration (when `wandb: true` in the project-level `CLAUDE.md`)
 
-**Skip this step entirely if `wandb` is not set or is `false` in `CLAUDE.md`.**
+**Skip this step entirely if `wandb` is not set or is `false` in the project-level `CLAUDE.md` (or repo fallback).**
 
 Before deploying, ensure the experiment scripts have W&B logging:
 
@@ -136,7 +140,7 @@ Before deploying, ensure the experiment scripts have W&B logging:
    ssh <server> "wandb login <WANDB_API_KEY>"
    ```
 
-> The W&B project name and API key come from `CLAUDE.md`. The experiment name is auto-generated from the script name + timestamp.
+> The W&B project name and API key come from the project-level `CLAUDE.md` first, then repo-root fallback if needed. The experiment name is auto-generated from the script name + timestamp.
 
 ### Step 4: Prepare Runtime Evidence Capture
 
@@ -328,7 +332,7 @@ Minimum contract:
 
 ## CLAUDE.md Example
 
-Users should add their server info to their project's `CLAUDE.md`:
+Users should add their server info to the research workspace `CLAUDE.md` at `$RESEARCH_ROOT/CLAUDE.md`:
 
 ```markdown
 ## Remote Server
@@ -346,4 +350,4 @@ Users should add their server info to their project's `CLAUDE.md`:
 - Conda env: `ml` (Python 3.10 + PyTorch)
 ```
 
-> **W&B setup**: Run `wandb login` on your server once (or set `WANDB_API_KEY` env var). The skill reads project / entity from `CLAUDE.md` and adds `wandb.init()` + `wandb.log()` to your training scripts automatically. Dashboard: `https://wandb.ai/<entity>/<project>`.
+> **W&B setup**: Run `wandb login` on your server once (or set `WANDB_API_KEY` env var). The skill reads project / entity from `$RESEARCH_ROOT/CLAUDE.md` first, then repo-root fallback, and adds `wandb.init()` + `wandb.log()` to your training scripts automatically. Dashboard: `https://wandb.ai/<entity>/<project>`.

@@ -14,7 +14,7 @@ Research topic: $ARGUMENTS
 - **PAPER_LIBRARY** — Local directory containing user's paper collection (PDFs). Check these paths in order:
   1. `papers/` in the current project directory
   2. `literature/` in the current project directory
-  3. Custom path specified by user in `CLAUDE.md` under `## Paper Library`
+  3. Custom path specified by user in the active research workspace `CLAUDE.md` under `## Paper Library` (fall back to repo-root `CLAUDE.md` if no project override exists)
 - **MAX_LOCAL_PAPERS = 20** — Maximum number of local PDFs to scan (read first 3 pages each). If more are found, prioritize by filename relevance to the topic.
 - **ARXIV_DOWNLOAD = false** — When `true`, download top 3-5 most relevant arXiv PDFs to PAPER_LIBRARY after search. When `false` (default), only fetch metadata (title, abstract, authors) via arXiv API — no files are downloaded.
 - **ARXIV_MAX_DOWNLOAD = 5** — Maximum number of PDFs to download when `ARXIV_DOWNLOAD = true`.
@@ -59,6 +59,18 @@ Examples:
 > **Graceful degradation**: If no MCP servers are configured, the skill works exactly as before (local PDFs + web search). Zotero and Obsidian are pure additions.
 
 ## Workflow
+
+### Step 0: Ensure Project CLAUDE.md (when a research workspace is active)
+
+If this call belongs to an active ARIS research workspace, ensure the project-level `CLAUDE.md` first:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py status --print-path 2>/dev/null || true)"
+if [ -n "$RESEARCH_ROOT" ]; then
+  PROJECT_CLAUDE="$(python3 tools/aris_claude_file.py ensure --workspace-root "$RESEARCH_ROOT" --print-path)"
+  echo "Using project CLAUDE.md: $PROJECT_CLAUDE"
+fi
+```
 
 ### Step 0a: Search Zotero Library (if available)
 

@@ -13,7 +13,7 @@ Periodically read WandB metrics during training to catch problems early. Do not 
 
 ## Constants
 
-- WANDB_ENTITY and WANDB_PROJECT: read from CLAUDE.md or passed as argument (format: `entity/project/run_id`)
+- WANDB_ENTITY and WANDB_PROJECT: read from the active research workspace `CLAUDE.md` first, then repo-root `CLAUDE.md`, or passed as argument (format: `entity/project/run_id`)
 - CHECK_INTERVAL: starts at 10 minutes, then gradually increases if consistently healthy: 10 min → 20 min → 30 min → 60 min (cap)
 - REVIEWER_MODEL = `gpt-5.4` — used via Codex MCP for ambiguous cases only
 
@@ -22,6 +22,18 @@ Periodically read WandB metrics during training to catch problems early. Do not 
 - After training is confirmed running (session alive, loss decreasing for first few steps)
 - Set up via CronCreate to fire periodically during training
 - **This skill checks training QUALITY, not process HEALTH.** Process health (session alive, GPU utilization) is [watchdog.py](../../tools/watchdog.py)'s job.
+
+## Project CLAUDE.md
+
+If this call belongs to an active ARIS research workspace, ensure the project-level `CLAUDE.md` first:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py status --print-path 2>/dev/null || true)"
+if [ -n "$RESEARCH_ROOT" ]; then
+  PROJECT_CLAUDE="$(python3 tools/aris_claude_file.py ensure --workspace-root "$RESEARCH_ROOT" --print-path)"
+  echo "Using project CLAUDE.md: $PROJECT_CLAUDE"
+fi
+```
 
 ## Workflow
 

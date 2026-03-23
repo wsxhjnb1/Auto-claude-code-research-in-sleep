@@ -14,11 +14,12 @@ This guide establishes a layered file system where each file has a clear purpose
 
 ```text
 repo-root/
-├── CLAUDE.md                          # Dashboard — Pipeline Status + project constraints
+├── CLAUDE.md                          # Optional repo-level shared defaults for CLAUDE fields
 ├── memory/                            # Repo-level shared research memory
 ├── vendor-skills/                     # Repo-level staged extensions
 ├── research/
 │   └── <slug>/
+│       ├── CLAUDE.md                  # Canonical project file — Pipeline Status + per-research constraints
 │       ├── IDEA_CANDIDATES.md         # Curated pool of viable ideas (post-review)
 │       ├── findings.md                # Lightweight discovery log (experiments + debug)
 │       ├── EXPERIMENT_LOG.md          # Complete record of all experiments run
@@ -30,6 +31,13 @@ repo-root/
 │           ├── EXPERIMENT_PLAN.md     # Experiment design (claims + blocks)
 │           ├── EXPERIMENT_TRACKER.md  # Execution checklist (TODO → DONE)
 │           └── REVIEW_STATE.json      # Review loop recovery state
+```
+
+Use the helper below to create or inspect the canonical project file for a workspace:
+
+```bash
+python3 tools/aris_claude_file.py ensure --workspace-root research/<slug> --print-path
+python3 tools/aris_claude_file.py status --workspace-root research/<slug>
 ```
 
 ### Existing ARIS Files (unchanged)
@@ -94,7 +102,7 @@ research/<slug>/findings.md       (one-line entry — anomaly, root cause, decis
 
 On new session or post-compaction, read files in this order:
 
-1. `CLAUDE.md` → Pipeline Status (30 seconds: where am I?)
+1. `research/<slug>/CLAUDE.md` → Pipeline Status (30 seconds: where am I?)
 2. `research/<slug>/docs/research_contract.md` (active idea context)
 3. `research/<slug>/findings.md` recent entries (what did I discover recently?)
 4. `research/<slug>/EXPERIMENT_LOG.md` (if needed: what experiments have been run?)
@@ -112,4 +120,4 @@ Do NOT read `research/<slug>/IDEA_REPORT.md` or `research/<slug>/IDEA_CANDIDATES
 | Where does "lr=1e-4 diverges on dataset-X" go? | `research/<slug>/findings.md` |
 | Where does "reviewer says add ablation" go? | `research/<slug>/AUTO_REVIEW.md` |
 | Where does "chose approach A over B because Z" go? | `research/<slug>/findings.md` |
-| Where does "current stage is training" go? | `CLAUDE.md` Pipeline Status |
+| Where does "current stage is training" go? | `research/<slug>/CLAUDE.md` Pipeline Status |

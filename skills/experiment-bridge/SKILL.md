@@ -24,7 +24,11 @@ Resolve the active research workspace before Phase 1:
 ```bash
 RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage experiment-bridge --arguments "$ARGUMENTS" --print-path)"
 echo "Using research workspace: $RESEARCH_ROOT"
+PROJECT_CLAUDE="$(python3 tools/aris_claude_file.py ensure --workspace-root "$RESEARCH_ROOT" --print-path)"
+echo "Using project CLAUDE.md: $PROJECT_CLAUDE"
 ```
+
+Treat `$RESEARCH_ROOT/CLAUDE.md` as the canonical project file for this research workspace. Repo-root `CLAUDE.md`, when present, only supplies shared defaults and field-level fallback for missing non-status settings such as server or W&B configuration.
 
 Behavior:
 
@@ -188,7 +192,7 @@ For each milestone (in order), write the experiment scripts:
    - enough persisted state to resume correctly: model, optimizer, scheduler, RNG/progress counters, and output locations
    - auto-resume behavior: relaunching the same run should discover the latest valid checkpoint and continue without a manually edited command
    - results saved to JSON/CSV for later analysis
-   - proper logging (wandb if configured in `CLAUDE.md`)
+   - proper logging (wandb if configured in `$RESEARCH_ROOT/CLAUDE.md`, with repo-root fallback only for missing shared fields)
    - metric and runtime hooks needed for `refine-logs/EXPERIMENT_RUNTIME.json`
 3. **Follow the plan's run order** — implement sanity-stage experiments first, then baselines, then main method, then ablations.
 4. **Self-review before external review:**
@@ -429,7 +433,7 @@ As experiments complete:
 
 1. **Parse output files** (JSON/CSV/logs) for key metrics
 2. **Parse `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`** for wall time, exit code, GPU memory, throughput, and failure signatures
-3. **Training quality check** — if W&B data is available (CLAUDE.md has `wandb: true` and `wandb_project`), invoke `/training-check` to detect NaN, loss divergence, plateaus, or overfitting. If W&B is not configured, skip silently.
+3. **Training quality check** — if W&B data is available (`$RESEARCH_ROOT/CLAUDE.md` has `wandb: true` and `wandb_project`, with repo-root fallback only for missing shared fields), invoke `/training-check` to detect NaN, loss divergence, plateaus, or overfitting. If W&B is not configured, skip silently.
 4. **Update `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md`** — fill in Status and Notes columns
 5. **Check success criteria** from `$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md` — did each experiment meet its bar?
 6. **Write initial results summary**:

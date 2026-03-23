@@ -27,7 +27,11 @@ RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage idea-di
 echo "Original topic: $ARGUMENTS"
 echo "Resolved research name: $RESEARCH_NAME"
 echo "Using research workspace: $RESEARCH_ROOT"
+PROJECT_CLAUDE="$(python3 tools/aris_claude_file.py ensure --workspace-root "$RESEARCH_ROOT" --print-path)"
+echo "Using project CLAUDE.md: $PROJECT_CLAUDE"
 ```
+
+The canonical project file for this research is `$RESEARCH_ROOT/CLAUDE.md`. If repo-root `CLAUDE.md` exists, use it only as shared defaults for new workspaces and fallback for missing shared fields. Keep `## Pipeline Status` in `$RESEARCH_ROOT/CLAUDE.md`.
 
 Behavior:
 

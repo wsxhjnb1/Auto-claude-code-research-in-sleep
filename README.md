@@ -80,6 +80,7 @@ claude mcp add codex -s user -- codex mcp-server
 # This repo already ships project-level Claude skills in `.claude/skills/`,
 # so starting Claude from this repo root exposes the main ARIS workflow slash commands directly.
 # The first main-entry call creates and activates a plain `research/<slug>/`; long topics are condensed into a short English workspace name first.
+# The first research-scoped Claude workflow also auto-creates `research/<slug>/CLAUDE.md`; repo-root `CLAUDE.md` can hold shared defaults for all workspaces.
 # Passing an existing `research/<slug>` directory name, saved research title, or original topic reopens that workspace directly.
 # You can later turn that workspace into its own Git repo with `python3 tools/aris_research_workspace.py git-init`,
 # or hydrate it directly from an existing GitHub repo with `python3 tools/aris_research_workspace.py clone-repo --repo-url ...`.
@@ -110,7 +111,7 @@ claude
 > | `optimization review` | `true` | Ask the reviewer for framework / backend / memory / throughput suggestions in a second pass |
 > | `workload profile` | `mixed` | Hint whether the run is `training`, `inference`, or `mixed` so backend recommendations stay semantically valid |
 > | `light profile` | `true` | Request a short hotspot / memory sample during sanity runs when the stack supports it cleanly |
-> | `wandb` | `false` | Auto-add W&B logging to experiment scripts. Set `true` + configure `wandb_project` in CLAUDE.md. `/monitor-experiment` pulls training curves from W&B |
+> | `wandb` | `false` | Auto-add W&B logging to experiment scripts. Set `true` + configure `wandb_project` in the active research workspace `CLAUDE.md` (`research/<slug>/CLAUDE.md`; repo-root `CLAUDE.md` is fallback-only). `/monitor-experiment` pulls training curves from W&B |
 > | `illustration` | `ai` | AI illustration in Workflow 3: `ai` (default, PaperBanana-derived runtime with browser-first Gemini web rendering), `mermaid` (free), or `false` (skip) |
 > | `illustration backend` | `browser` | Backend for `illustration: ai`: `browser` (default, dedicated Gemini web profile) or `api` (explicit fallback) |
 > | `venue` | `ICLR` | Target venue: `ICLR`, `NeurIPS`, `ICML`, `CVPR`, `ACL`, `AAAI`, `ACM`. Determines LaTeX style file and page limit |
@@ -142,7 +143,7 @@ See [full setup guide](#%EF%B8%8F-setup) for details and [alternative model comb
 - 📝 **Paper writing** — narrative → outline → figures → LaTeX → PDF → auto-review (4/10 → 8.5/10), one command. Anti-hallucination citations via [DBLP](https://dblp.org)/[CrossRef](https://www.crossref.org)
 - 🤖 **Cross-model collaboration** — Claude Code executes, GPT-5.4 xhigh reviews. Adversarial, not self-play
 - 📝 **Peer review** — review others' papers as a conference reviewer, with structured scoring and meta-review
-- 🖥️ **Review-driven experiments** — `experiment-bridge` now runs a bounded executor-vs-reviewer debate before deployment, captures `EXPERIMENT_RUNTIME.json`, re-enters review on blocker-level runtime failures, and treats missing checkpoint / auto-resume support as a correctness blocker for long runs. Just configure your server in `CLAUDE.md` ([setup guide](#%EF%B8%8F-gpu-server-setup-for-auto-experiments))
+- 🖥️ **Review-driven experiments** — `experiment-bridge` now runs a bounded executor-vs-reviewer debate before deployment, captures `EXPERIMENT_RUNTIME.json`, re-enters review on blocker-level runtime failures, and treats missing checkpoint / auto-resume support as a correctness blocker for long runs. Just configure your server in the active research workspace `CLAUDE.md` (`research/<slug>/CLAUDE.md`; repo-root `CLAUDE.md` is fallback-only) ([setup guide](#%EF%B8%8F-gpu-server-setup-for-auto-experiments))
 - 🔀 **Flexible models** — default Claude × GPT-5.4, also supports [GLM, MiniMax, Kimi, LongCat, DeepSeek, etc.](#-alternative-model-combinations) — no Claude or OpenAI API required
 - 🛑 **Human-in-the-loop** — configurable checkpoints at key decisions. `AUTO_PROCEED=true` for full autopilot, `false` to approve each step
 - 📱 **[Feishu/Lark notifications](#-feishulark-integration-optional)** — three modes: **off (default, strongly recommended for most users)**, push-only (webhook, mobile alerts), interactive (approve/reject from Feishu). Zero impact when unconfigured
@@ -400,7 +401,7 @@ Workflow 1.5 now also reads `memory/experiment-memory.md` before experiment rede
 
 > **"Review my paper, fix what's wrong, repeat until it's good."**
 >
-> GPT-5.4 reviews → identifies weaknesses → suggests experiments → Claude Code writes scripts, deploys to GPU, monitors results, rewrites the paper — all while you sleep. Just add your [GPU server config](#%EF%B8%8F-gpu-server-setup-for-auto-experiments) to `CLAUDE.md`.
+> GPT-5.4 reviews → identifies weaknesses → suggests experiments → Claude Code writes scripts, deploys to GPU, monitors results, rewrites the paper — all while you sleep. Just add your [GPU server config](#%EF%B8%8F-gpu-server-setup-for-auto-experiments) to the active research workspace `CLAUDE.md`.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -806,7 +807,9 @@ To run the auto-review loop without clicking permission prompts, add to `.claude
 
 When GPT-5.4 says "run an ablation study" or "add a baseline comparison", Claude Code automatically writes the experiment script and deploys it to your GPU server. For this to work, Claude Code needs to know your server environment.
 
-Add your server info to your project's `CLAUDE.md`:
+Each research workspace keeps its own canonical `CLAUDE.md` at `research/<slug>/CLAUDE.md`. The first Claude workflow that enters that workspace creates it automatically. If you also keep a repo-root `CLAUDE.md`, ARIS treats it as shared defaults for new workspaces and as fallback for missing shared fields.
+
+Add your server info to the active research workspace `CLAUDE.md`:
 
 ```markdown
 ## Remote Server
@@ -819,9 +822,9 @@ Add your server info to your project's `CLAUDE.md`:
 - Use `screen` for background jobs: `screen -dmS exp0 bash -c '...'`
 ```
 
-Claude Code reads this and knows how to SSH in, activate the environment, and launch experiments. GPT-5.4 (the reviewer) only decides **what** experiments to run — Claude Code figures out **how** based on your `CLAUDE.md`.
+Claude Code reads the active research workspace `CLAUDE.md` first and falls back to repo-root `CLAUDE.md` only for missing shared fields. GPT-5.4 (the reviewer) only decides **what** experiments to run — Claude Code figures out **how** based on that project-level configuration.
 
-If you are already on the GPU server, you can add the following to your `CLAUDE.md`:
+If you are already on the GPU server, you can add the following to the active research workspace `CLAUDE.md`:
 ```markdown
 ## GPU Environment
 
@@ -1189,7 +1192,7 @@ Override inline: `/idea-discovery "topic" — pilot budget: 4h per idea, sources
 | `AUTO_DEPLOY` | true | Automatically deploy experiments after implementation + review. Set `false` to manually inspect |
 | `SANITY_FIRST` | true | Run smallest experiment first to catch setup bugs before full deployment |
 | `MAX_PARALLEL_RUNS` | 4 | Maximum experiments to deploy in parallel (limited by available GPUs) |
-| `WANDB` | false | Auto-add W&B logging. Requires `wandb_project` in CLAUDE.md |
+| `WANDB` | false | Auto-add W&B logging. Requires `wandb_project` in the active research workspace `CLAUDE.md` |
 | `BASE_REPO` | false | GitHub repo URL to hydrate the active research workspace itself as a git-backed codebase |
 
 Override inline: `/experiment-bridge — code review mode: single, workload profile: inference, base repo: https://github.com/org/project`

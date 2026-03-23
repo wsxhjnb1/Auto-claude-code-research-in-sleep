@@ -16,7 +16,11 @@ Resolve the active research workspace before collecting artifacts:
 ```bash
 RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage monitor-experiment --arguments "$ARGUMENTS" --print-path)"
 echo "Using research workspace: $RESEARCH_ROOT"
+PROJECT_CLAUDE="$(python3 tools/aris_claude_file.py ensure --workspace-root "$RESEARCH_ROOT" --print-path)"
+echo "Using project CLAUDE.md: $PROJECT_CLAUDE"
 ```
+
+Use `$RESEARCH_ROOT/CLAUDE.md` as the canonical project file. Repo-root `CLAUDE.md`, when present, only supplies shared defaults and fallback for missing shared fields such as W&B configuration.
 
 Treat runtime artifacts and run outputs as relative to `$RESEARCH_ROOT`, especially:
 
@@ -71,9 +75,9 @@ Use it to answer:
 - is a valid checkpoint available right now?
 - if the run stopped, can it resume automatically or not?
 
-### Step 3.5: Pull W&B Metrics (when `wandb: true` in CLAUDE.md)
+### Step 3.5: Pull W&B Metrics (when `wandb: true` in the project-level `CLAUDE.md`)
 
-**Skip this step entirely if `wandb` is not set or is `false` in CLAUDE.md.**
+**Skip this step entirely if `wandb` is not set or is `false` in `$RESEARCH_ROOT/CLAUDE.md`, falling back to repo-root `CLAUDE.md` only for missing shared fields.**
 
 Pull training curves and metrics from Weights & Biases via Python API:
 
