@@ -3,7 +3,7 @@ name: "experiment-bridge"
 description: "Workflow 1.5: Bridge between idea discovery and auto review. Reads EXPERIMENT_PLAN.md, implements experiment code, runs a bounded debate using Claude Code via claude-review MCP, deploys to GPU, and collects initial results."
 ---
 
-> Override for Codex users who want **Claude Code**, not a second Codex agent, to act as the reviewer. Install this package **after** `skills/skills-codex/*`.
+> Override for Codex users who want **Claude Code**, not a second Codex agent, to act as the reviewer. Use it from a checked-out ARIS repo together with the repo-local `skills/skills-codex/` base package.
 
 # Workflow 1.5: Experiment Bridge
 
@@ -21,6 +21,10 @@ refine-logs/FINAL_PROPOSAL.md
 ```
 
 The debate loop is default-enabled in v1. It is framework-agnostic at the core, but it may recommend faster frameworks, runtimes, or kernel work when runtime evidence clearly justifies it.
+
+## Repo-Root Requirement
+
+Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/`.
 
 ## Constants
 
@@ -53,11 +57,11 @@ The debate loop is default-enabled in v1. It is framework-agnostic at the core, 
 
 ## Prerequisites
 
-- Install the base Codex-native skills first: copy `skills/skills-codex/*` into `~/.codex/skills/`.
-- Then install this overlay package: copy `skills/skills-codex-claude-review/*` into `~/.codex/skills/` and allow it to overwrite the same skill names.
+- Use the repo-local `skills/skills-codex/` tree as the base skill package.
+- Layer this repo-local `skills/skills-codex-claude-review/` override on top of that base package.
 - Register the local reviewer bridge:
   ```bash
-  codex mcp add claude-review -- python3 ~/.codex/mcp-servers/claude-review/server.py
+  codex mcp add claude-review -- python3 /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/server.py
   ```
 - This gives Codex access to `mcp__claude-review__review_start`, `mcp__claude-review__review_reply_start`, and `mcp__claude-review__review_status`.
 
@@ -453,7 +457,7 @@ Ready for Workflow 2:
 - **Do not auto-switch frameworks.** A suggestion to use a different backend belongs in the debate log until explicitly accepted for a future change.
 - **Do not recommend Triton / CUDA casually.** Require hotspot evidence, a fallback path, and an expected gain statement.
 - **Read `memory/experiment-memory.md` before redesigning experiments or repeating a runtime fix.**
-- **Treat repo-local vendor skills as workspace-only by default.** Only explicit `tools/aris_skill_manager.py sync-global` should publish them to `~/.codex/skills/` or `~/.claude/skills/`.
+- **Treat repo-local vendor skills as workspace-only.** Keep them inside `vendor-skills/` for this repo; do not publish or copy them into external global skill directories.
 - **Reflection + memory update is part of the Workflow 1.5 contract** after major result snapshots, runtime anomalies, or design pivots.
 - **Document the reviewer agent id** for future resumption.
 - **Budget awareness.** Track GPU-hours against the plan's budget and warn when approaching the limit.

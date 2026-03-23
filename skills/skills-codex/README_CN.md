@@ -26,7 +26,7 @@ skills/skills-codex/
 
 ### 2.1 范围控制
 
-本包没有把当前 `~/.codex/skills` 里的所有内容都打进去，而是只保留：
+本包不是某个全局 `~/.codex/skills` 目录快照，而是 repo 内 `skills/skills-codex/` 的源码视图，只保留：
 
 - 主线 `skills/` 中已有的同名技能
 - 这些技能所需的最小资源目录
@@ -134,27 +134,21 @@ skills/skills-codex/
 - `paper-write` 依赖 `templates/`
 - `comm-lit-review` 依赖 `references/`
 
-## 4. 如何在新的 Codex 里安装
+## 4. 如何在新的 Codex 里使用
 
-### 4.1 基本安装
+### 4.1 工作区模式
 
-在新环境里，把本目录下的技能复制到 `~/.codex/skills/` 即可：
-
-```bash
-mkdir -p ~/.codex/skills
-cp -a skills/skills-codex/* ~/.codex/skills/
-```
-
-如果你当前就在仓库根目录，也可以用绝对路径：
+不要再把本目录复制到 `~/.codex/skills/`。ARIS 现在只支持 repo 工作区模式：保留当前仓库为 source of truth，并在这个 repo 根目录内运行相关 workflow。
 
 ```bash
-mkdir -p ~/.codex/skills
-cp -a /path/to/Auto-claude-code-research-in-sleep/skills/skills-codex/* ~/.codex/skills/
+git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
+cd Auto-claude-code-research-in-sleep
+codex -C /path/to/Auto-claude-code-research-in-sleep
 ```
 
 ### 4.2 安装后建议
 
-安装完成后，建议：
+进入 repo 工作区后，建议：
 
 1. 启动一个新的 Codex 会话
 2. 检查技能列表里是否能看到新增的 `comm-lit-review`
@@ -167,19 +161,7 @@ cp -a /path/to/Auto-claude-code-research-in-sleep/skills/skills-codex/* ~/.codex
 
 ### 4.3 验证方式
 
-如果目标环境中带有 Codex 的 system skills，可以用：
-
-```bash
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py ~/.codex/skills/comm-lit-review
-```
-
-如果输出：
-
-```text
-Skill is valid!
-```
-
-说明目录结构至少是合法的。
+如果需要做轻量校验，直接检查当前 repo 里的 `skills/skills-codex/comm-lit-review/` 结构是否完整即可。
 
 ## 5. 安装时需要知道的边界
 
@@ -203,11 +185,11 @@ Skill is valid!
 
 ### 5.2 `.system` 不在本包里
 
-本包没有包含：
+本包没有包含这些 Codex system skills：
 
-- `~/.codex/skills/.system/openai-docs`
-- `~/.codex/skills/.system/skill-creator`
-- `~/.codex/skills/.system/skill-installer`
+- `.system/openai-docs`
+- `.system/skill-creator`
+- `.system/skill-installer`
 
 默认假设新的 Codex 环境本身已经带有这些系统技能，或者不依赖它们。
 

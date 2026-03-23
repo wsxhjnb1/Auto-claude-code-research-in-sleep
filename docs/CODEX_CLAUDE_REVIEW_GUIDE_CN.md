@@ -6,7 +6,7 @@
 - **Claude Code CLI** 作为审稿人
 - 通过本地 `claude-review` MCP bridge 连接两者
 
-这条路径是对上游 Codex 原生方案的**增量叠加**，不会替代 `skills/skills-codex/`。
+这条路径是当前 ARIS 工作区内的 **repo 本地叠加方案**，不需要把 skills 复制到 `~/.codex/skills/`。
 
 ## 架构
 
@@ -14,40 +14,33 @@
 - 审稿覆盖层：`skills/skills-codex-claude-review/`
 - 审稿 bridge：`mcp-servers/claude-review/`
 
-安装顺序必须保持：
+repo 本地分层顺序必须保持：
 
-1. 先安装 `skills/skills-codex/*`
-2. 再安装 `skills/skills-codex-claude-review/*`
-3. 最后注册 `claude-review` MCP
+1. 先使用 `skills/skills-codex/` 作为基础 skill tree
+2. 再使用 `skills/skills-codex-claude-review/` 作为 review 覆盖层
+3. 最后从当前 repo 注册 `claude-review` MCP
 
-## 安装
+## 工作区配置
 
 ```bash
 git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
 cd Auto-claude-code-research-in-sleep
 
-mkdir -p ~/.codex/skills
-cp -a skills/skills-codex/* ~/.codex/skills/
-cp -a skills/skills-codex-claude-review/* ~/.codex/skills/
-
-mkdir -p ~/.codex/mcp-servers/claude-review
-cp mcp-servers/claude-review/server.py ~/.codex/mcp-servers/claude-review/server.py
-codex mcp add claude-review -- python3 ~/.codex/mcp-servers/claude-review/server.py
+codex mcp add claude-review -- python3 /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/server.py
 ```
 
 如果你的 Claude 登录依赖 `claude-aws` 之类的 shell helper，请改用 wrapper：
 
 ```bash
-cp mcp-servers/claude-review/run_with_claude_aws.sh ~/.codex/mcp-servers/claude-review/run_with_claude_aws.sh
-chmod +x ~/.codex/mcp-servers/claude-review/run_with_claude_aws.sh
-codex mcp add claude-review -- ~/.codex/mcp-servers/claude-review/run_with_claude_aws.sh
+chmod +x mcp-servers/claude-review/run_with_claude_aws.sh
+codex mcp add claude-review -- /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/run_with_claude_aws.sh
 ```
 
 如果你想固定 Claude 审稿模型：
 
 ```bash
 codex mcp remove claude-review
-codex mcp add claude-review --env CLAUDE_REVIEW_MODEL=claude-opus-4-1 -- python3 ~/.codex/mcp-servers/claude-review/server.py
+codex mcp add claude-review --env CLAUDE_REVIEW_MODEL=claude-opus-4-1 -- python3 /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/server.py
 ```
 
 ## 验证
@@ -64,10 +57,10 @@ codex mcp list
 claude -p "Reply with exactly READY" --output-format json --tools ""
 ```
 
-3. 在项目中启动 Codex：
+3. 从 ARIS repo 根目录或你的 ARIS fork 根目录启动 Codex：
 
 ```bash
-codex -C /path/to/your/project
+codex -C /path/to/Auto-claude-code-research-in-sleep
 ```
 
 ## 哪些技能会被覆盖
@@ -106,7 +99,7 @@ codex -C /path/to/your/project
 
 - 继续使用现有 `CLAUDE.md`
 - 保持原有项目目录结构
-- 只需要切换 Codex 安装的技能文件和 MCP 注册
+- 只需要保留当前工作区内的 Codex skill trees 和 MCP 注册
 
 ## 维护
 

@@ -6,7 +6,7 @@ This package is a **thin override layer** for users who want:
 - **Claude Code** as the reviewer
 - the local `claude-review` MCP bridge instead of a second Codex reviewer
 
-It is designed to sit on top of the upstream Codex-native package at `skills/skills-codex/`.
+It is designed to sit on top of the repo-local Codex-native package at `skills/skills-codex/`.
 
 ## What this package contains
 
@@ -26,35 +26,27 @@ Current overrides:
 - `paper-write`
 - `auto-paper-improvement-loop`
 
-## Install
+## Workspace Setup
 
-1. Install the base Codex-native skills first:
+1. Keep the base Codex-native skill tree in this repo:
 
-```bash
-mkdir -p ~/.codex/skills
-cp -a skills/skills-codex/* ~/.codex/skills/
-```
+`skills/skills-codex/`
 
-2. Install the Claude-review overrides second:
+2. Layer this Claude-review override tree on top of it:
 
-```bash
-cp -a skills/skills-codex-claude-review/* ~/.codex/skills/
-```
+`skills/skills-codex-claude-review/`
 
 3. Register the local reviewer bridge:
 
 ```bash
-mkdir -p ~/.codex/mcp-servers/claude-review
-cp mcp-servers/claude-review/server.py ~/.codex/mcp-servers/claude-review/server.py
-codex mcp add claude-review -- python3 ~/.codex/mcp-servers/claude-review/server.py
+codex mcp add claude-review -- python3 /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/server.py
 ```
 
 If your Claude setup depends on a shell helper such as `claude-aws`, use the wrapper instead:
 
 ```bash
-cp mcp-servers/claude-review/run_with_claude_aws.sh ~/.codex/mcp-servers/claude-review/run_with_claude_aws.sh
-chmod +x ~/.codex/mcp-servers/claude-review/run_with_claude_aws.sh
-codex mcp add claude-review -- ~/.codex/mcp-servers/claude-review/run_with_claude_aws.sh
+chmod +x mcp-servers/claude-review/run_with_claude_aws.sh
+codex mcp add claude-review -- /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/run_with_claude_aws.sh
 ```
 
 ## Why this exists

@@ -9,6 +9,10 @@ Autonomously iterate: review → implement fixes → re-review, until the extern
 
 ## Context: $ARGUMENTS
 
+## Repo-Root Requirement
+
+Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, and `refine-logs/`.
+
 ## Constants
 
 - MAX_ROUNDS = 4

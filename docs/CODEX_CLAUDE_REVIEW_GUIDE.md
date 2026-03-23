@@ -6,7 +6,7 @@ Run ARIS with:
 - **Claude Code CLI** as the reviewer
 - the local `claude-review` MCP bridge as the transport layer
 
-This guide is **additive** to the upstream Codex-native path. It does not replace `skills/skills-codex/`.
+This guide is **repo-local** to the checked-out ARIS workspace. It does not require copying skills into `~/.codex/skills/`.
 
 ## Architecture
 
@@ -14,40 +14,33 @@ This guide is **additive** to the upstream Codex-native path. It does not replac
 - Reviewer override layer: `skills/skills-codex-claude-review/`
 - Reviewer bridge: `mcp-servers/claude-review/`
 
-The install order matters:
+The repo-local layering order matters:
 
-1. install `skills/skills-codex/*`
-2. install `skills/skills-codex-claude-review/*`
-3. register `claude-review` MCP
+1. use `skills/skills-codex/` as the base skill tree
+2. use `skills/skills-codex-claude-review/` as the review override layer
+3. register `claude-review` MCP from this repo
 
-## Install
+## Workspace Setup
 
 ```bash
 git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
 cd Auto-claude-code-research-in-sleep
 
-mkdir -p ~/.codex/skills
-cp -a skills/skills-codex/* ~/.codex/skills/
-cp -a skills/skills-codex-claude-review/* ~/.codex/skills/
-
-mkdir -p ~/.codex/mcp-servers/claude-review
-cp mcp-servers/claude-review/server.py ~/.codex/mcp-servers/claude-review/server.py
-codex mcp add claude-review -- python3 ~/.codex/mcp-servers/claude-review/server.py
+codex mcp add claude-review -- python3 /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/server.py
 ```
 
 If your Claude login depends on a shell helper such as `claude-aws`, use the wrapper:
 
 ```bash
-cp mcp-servers/claude-review/run_with_claude_aws.sh ~/.codex/mcp-servers/claude-review/run_with_claude_aws.sh
-chmod +x ~/.codex/mcp-servers/claude-review/run_with_claude_aws.sh
-codex mcp add claude-review -- ~/.codex/mcp-servers/claude-review/run_with_claude_aws.sh
+chmod +x mcp-servers/claude-review/run_with_claude_aws.sh
+codex mcp add claude-review -- /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/run_with_claude_aws.sh
 ```
 
 Optional reviewer model override:
 
 ```bash
 codex mcp remove claude-review
-codex mcp add claude-review --env CLAUDE_REVIEW_MODEL=claude-opus-4-1 -- python3 ~/.codex/mcp-servers/claude-review/server.py
+codex mcp add claude-review --env CLAUDE_REVIEW_MODEL=claude-opus-4-1 -- python3 /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/server.py
 ```
 
 ## Verify
@@ -64,10 +57,10 @@ codex mcp list
 claude -p "Reply with exactly READY" --output-format json --tools ""
 ```
 
-3. Start Codex in your project:
+3. Start Codex from the ARIS repo root or your ARIS fork root:
 
 ```bash
-codex -C /path/to/your/project
+codex -C /path/to/Auto-claude-code-research-in-sleep
 ```
 
 ## What gets overridden
@@ -106,7 +99,7 @@ No special project config file is required for this path.
 
 - keep using your existing `CLAUDE.md`
 - keep your current project layout
-- only switch the installed Codex skill files and MCP registration
+- keep the repo-local Codex skill trees and MCP registration in this workspace
 
 ## Maintenance
 

@@ -6,7 +6,7 @@
 - **Claude Code** 作为审稿人
 - 用本地 `claude-review` MCP bridge 替代“第二个 Codex reviewer”
 
-它不是新造一套完整技能包，而是叠加在上游已有的 `skills/skills-codex/` 之上。
+它不是新造一套完整技能包，而是叠加在当前 repo 本地的 `skills/skills-codex/` 之上。
 
 ## 这个包包含什么
 
@@ -26,35 +26,27 @@
 - `paper-write`
 - `auto-paper-improvement-loop`
 
-## 安装方式
+## 工作区配置
 
-1. 先安装上游原生 Codex 技能包：
+1. 保留当前 repo 内的基础 Codex skill tree：
 
-```bash
-mkdir -p ~/.codex/skills
-cp -a skills/skills-codex/* ~/.codex/skills/
-```
+`skills/skills-codex/`
 
-2. 再安装这个 Claude-review 覆盖层：
+2. 再叠加当前 repo 内的 Claude-review 覆盖层：
 
-```bash
-cp -a skills/skills-codex-claude-review/* ~/.codex/skills/
-```
+`skills/skills-codex-claude-review/`
 
 3. 注册本地 reviewer bridge：
 
 ```bash
-mkdir -p ~/.codex/mcp-servers/claude-review
-cp mcp-servers/claude-review/server.py ~/.codex/mcp-servers/claude-review/server.py
-codex mcp add claude-review -- python3 ~/.codex/mcp-servers/claude-review/server.py
+codex mcp add claude-review -- python3 /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/server.py
 ```
 
 如果你的 Claude 依赖 `claude-aws` 之类的 shell helper，再改用 wrapper：
 
 ```bash
-cp mcp-servers/claude-review/run_with_claude_aws.sh ~/.codex/mcp-servers/claude-review/run_with_claude_aws.sh
-chmod +x ~/.codex/mcp-servers/claude-review/run_with_claude_aws.sh
-codex mcp add claude-review -- ~/.codex/mcp-servers/claude-review/run_with_claude_aws.sh
+chmod +x mcp-servers/claude-review/run_with_claude_aws.sh
+codex mcp add claude-review -- /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/run_with_claude_aws.sh
 ```
 
 ## 为什么需要这个包

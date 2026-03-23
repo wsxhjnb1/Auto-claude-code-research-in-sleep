@@ -7,6 +7,10 @@ description: "Workflow 3: Full paper writing pipeline. Orchestrates narrative sy
 
 Orchestrate a complete paper writing workflow for: **$ARGUMENTS**
 
+## Repo-Root Requirement
+
+Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, `refine-logs/`, and `paper/`.
+
 ## Overview
 
 This workflow is now an artifact-driven chain:

@@ -7,6 +7,10 @@ description: "Full research pipeline: Workflow 1 → 1.5 → 2 → 3. Goes from 
 
 End-to-end autonomous research workflow for: **$ARGUMENTS**
 
+## Repo-Root Requirement
+
+Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/`.
+
 ## Constants
 
 - **AUTO_PROCEED = true**
@@ -55,7 +59,7 @@ Before Workflow 1 starts, read these files if they exist:
 - `memory/experiment-memory.md`
 - `vendor-skills/INSTALLED_SKILLS.json`
 
-Use them to avoid repeating failed directions, reuse proven experiment strategies, and discover any repo-local vendor skills that may be relevant. Do not auto-sync repo-local vendor skills into `~/.codex/skills/` or `~/.claude/skills/`.
+Use them to avoid repeating failed directions, reuse proven experiment strategies, and discover any repo-local vendor skills that may be relevant. Keep vendor skills inside this repo's `vendor-skills/` directory.
 
 ## Pipeline
 
@@ -147,7 +151,7 @@ Output:
 
 - Read repo-local memory before starting and before any experiment redesign.
 - Before entering the main workflow, try `tools/aris_upstream_sync.py sync` and keep the repo on a single long-lived `main` branch.
-- Keep `vendor-skills/` repo-local by default; only `tools/aris_skill_manager.py sync-global` should publish a vendor skill into a global skill directory.
+- Keep `vendor-skills/` repo-local. Do not publish or copy vendor skills into external global skill directories.
 - Treat reflection + memory update as part of the pipeline contract, not an optional note-taking step.
 - Use `/experiment-bridge`, not a free-form implementation step.
 - `AUTO_REVIEW.md` is canonical.

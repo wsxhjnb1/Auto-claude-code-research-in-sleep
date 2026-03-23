@@ -7,6 +7,10 @@ description: "Workflow 1.5: Bridge between idea discovery and auto review. Reads
 
 Implement, debate, and deploy experiments from plan: **$ARGUMENTS**
 
+## Repo-Root Requirement
+
+Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/`.
+
 ## Overview
 
 This skill bridges Workflow 1 (idea discovery + method refinement) and Workflow 2 (auto review loop). It takes the experiment plan and turns it into running experiments with initial results.
@@ -152,7 +156,7 @@ git clone <BASE_REPO> base_repo/
 For each milestone (in order), write the experiment scripts:
 
 1. **Check existing code** — scan the project (or cloned `base_repo/`) for existing experiment scripts, model code, data loaders. Reuse as much as possible.
-   - Also inspect any relevant repo-local vendor skill staged under `vendor-skills/`. Reuse it locally if it fits, but do not auto-sync it into a global skill directory.
+   - Also inspect any relevant repo-local vendor skill staged under `vendor-skills/`. Reuse it locally if it fits, but keep it inside this repo.
 2. **Implement missing pieces:**
    - training scripts with proper argparse (all hyperparameters configurable)
    - evaluation scripts computing the specified metrics
@@ -443,7 +447,7 @@ Ready for Workflow 2:
 - **Do not auto-switch frameworks.** A suggestion to use a different backend belongs in the debate log until explicitly accepted for a future change.
 - **Do not recommend Triton / CUDA casually.** Require hotspot evidence, a fallback path, and an expected gain statement.
 - **Read `memory/experiment-memory.md` before redesigning experiments or repeating a runtime fix.**
-- **Treat repo-local vendor skills as workspace-only by default.** Only explicit `tools/aris_skill_manager.py sync-global` should publish them to `~/.codex/skills/` or `~/.claude/skills/`.
+- **Treat repo-local vendor skills as workspace-only.** Keep them inside `vendor-skills/` for this repo; do not publish or copy them into external global skill directories.
 - **Reflection + memory update is part of the Workflow 1.5 contract** after major result snapshots, runtime anomalies, or design pivots.
 - **Document the reviewer agent id** for future resumption.
 - **Budget awareness.** Track GPU-hours against the plan's budget and warn when approaching the limit.

@@ -9,6 +9,10 @@ allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, WebSearch, WebFetch, Agen
 
 Orchestrate a complete idea discovery workflow for: **$ARGUMENTS**
 
+## Repo-Root Requirement
+
+Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/`.
+
 ## Overview
 
 This skill chains sub-skills into a single automated pipeline:

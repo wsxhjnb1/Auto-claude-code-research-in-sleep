@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Manage repo-local vendor skills for ARIS.
 
-This tool stages third-party skills inside ``vendor-skills/`` and can
-optionally publish them into the active global skills directory.
+This tool stages third-party skills inside ``vendor-skills/`` and keeps them
+workspace-local. ARIS no longer supports publishing vendor skills into global
+skill directories as an official workflow.
 """
 
 from __future__ import annotations
@@ -295,55 +296,11 @@ def uninstall_skill(name: str, vendor_dir: Path) -> None:
     save_manifest(vendor_dir, manifest)
 
 
-def detect_global_target(target: str) -> Path:
-    target = target.lower()
-    codex_dir = Path.home() / ".codex" / "skills"
-    claude_dir = Path.home() / ".claude" / "skills"
-    if target == "codex":
-        return codex_dir
-    if target == "claude":
-        return claude_dir
-    if codex_dir.exists():
-        return codex_dir
-    if claude_dir.exists():
-        return claude_dir
-    return codex_dir
-
-
-def sync_global(vendor_dir: Path, target: str, names: list[str] | None, global_dir: Path | None) -> dict:
-    ensure_vendor_dir(vendor_dir)
-    dest_dir = global_dir.expanduser().resolve() if global_dir else detect_global_target(target).expanduser().resolve()
-    dest_dir.mkdir(parents=True, exist_ok=True)
-
-    available = {item["name"]: item for item in list_skills(vendor_dir)}
-    selected_names = names or sorted(available)
-    if not selected_names:
-        raise SystemExit("No vendor skills installed to sync.")
-
-    copied: list[str] = []
-    for name in selected_names:
-        if name not in available:
-            raise SystemExit(f"Vendor skill not found for sync: {name}")
-        source_dir = vendor_dir / name
-        target_dir = dest_dir / name
-        if target_dir.exists():
-            shutil.rmtree(target_dir)
-        shutil.copytree(source_dir, target_dir)
-        copied.append(name)
-
-    manifest = load_manifest(vendor_dir)
-    sync_stamp = {
-        "target": str(dest_dir),
-        "synced_at": utc_now(),
-    }
-    for row in manifest:
-        if row.get("name") not in copied:
-            continue
-        targets = [item for item in row.get("synced_targets", []) if item.get("target") != str(dest_dir)]
-        targets.append(sync_stamp)
-        row["synced_targets"] = targets
-    save_manifest(vendor_dir, manifest)
-    return {"target_dir": str(dest_dir), "skills": copied}
+def sync_global_removed() -> None:
+    raise SystemExit(
+        "sync-global has been removed. ARIS now supports only repo workspace mode. "
+        "Keep vendor skills inside this repo's vendor-skills/ directory."
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -365,9 +322,12 @@ def build_parser() -> argparse.ArgumentParser:
     uninstall_p.add_argument("--name", required=True)
     uninstall_p.add_argument("--vendor-dir", default=str(DEFAULT_VENDOR_DIR), help=argparse.SUPPRESS)
 
-    sync_p = subparsers.add_parser("sync-global", help="Publish vendor skills to the active global skills directory.")
-    sync_p.add_argument("--target", default="auto", choices=["auto", "codex", "claude"])
-    sync_p.add_argument("--name", action="append", default=[], help="Sync only the named skill. Repeatable.")
+    sync_p = subparsers.add_parser(
+        "sync-global",
+        help="Removed. ARIS vendor skills stay repo-local.",
+    )
+    sync_p.add_argument("--target", default="auto", choices=["auto", "codex", "claude"], help=argparse.SUPPRESS)
+    sync_p.add_argument("--name", action="append", default=[], help=argparse.SUPPRESS)
     sync_p.add_argument("--vendor-dir", default=str(DEFAULT_VENDOR_DIR), help=argparse.SUPPRESS)
     sync_p.add_argument("--global-dir", default="", help=argparse.SUPPRESS)
 
@@ -394,10 +354,7 @@ def main() -> int:
         print(json.dumps({"removed": args.name}, indent=2, ensure_ascii=False))
         return 0
     if args.command == "sync-global":
-        global_dir = Path(args.global_dir) if args.global_dir else None
-        result = sync_global(vendor_dir, args.target, args.name or None, global_dir)
-        print(json.dumps(result, indent=2, ensure_ascii=False))
-        return 0
+        sync_global_removed()
 
     parser.error(f"Unsupported command: {args.command}")
     return 2

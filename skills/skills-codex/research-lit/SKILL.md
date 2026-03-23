@@ -124,18 +124,17 @@ Before searching online, check if the user already has relevant papers locally:
 
 **arXiv API search** (always runs, no download by default):
 
-Locate the fetch script and search arXiv directly:
+Locate the fetch script and search arXiv directly from this ARIS repo:
 ```bash
-# Try to find arxiv_fetch.py
-SCRIPT=$(find tools/ -name "arxiv_fetch.py" 2>/dev/null | head -1)
-# If not found, check ARIS install
-[ -z "$SCRIPT" ] && SCRIPT=$(find ~/.codex/skills/arxiv/ -name "arxiv_fetch.py" 2>/dev/null | head -1)
+# ARIS must be run from the repo root so the repo-local tool is available
+SCRIPT="tools/arxiv_fetch.py"
+[ -f "$SCRIPT" ] || { echo "Missing tools/arxiv_fetch.py; run from the ARIS repo root."; exit 1; }
 
 # Search arXiv API for structured results (title, abstract, authors, categories)
 python3 "$SCRIPT" search "QUERY" --max 10
 ```
 
-If `arxiv_fetch.py` is not found, fall back to WebSearch for arXiv (same as before).
+If `tools/arxiv_fetch.py` is unavailable, fall back to WebSearch for arXiv (same as before).
 
 The arXiv API returns structured metadata (title, abstract, full author list, categories, dates) — richer than WebSearch snippets. Merge these results with WebSearch findings and de-duplicate.
 
@@ -189,4 +188,3 @@ If Zotero BibTeX was exported, include a `references.bib` snippet for direct use
 - Note if a paper directly competes with or supports our approach
 - **Never fail because a MCP server is not configured** — always fall back gracefully to the next data source
 - Zotero/Obsidian tools may have different names depending on how the user configured the MCP server (e.g., `mcp__zotero__search` or `mcp__zotero-mcp__search_items`). Try the most common patterns and adapt.
-

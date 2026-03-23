@@ -9,6 +9,10 @@ allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, Skill, mcp__codex_
 
 Orchestrate a complete paper writing workflow for: **$ARGUMENTS**
 
+## Repo-Root Requirement
+
+Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, `refine-logs/`, and `paper/`.
+
 ## Overview
 
 This workflow is now a true artifact-driven pipeline:

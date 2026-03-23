@@ -67,16 +67,16 @@ Custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skills for 
 ## 🚀 Quick Start
 
 ```bash
-# 1. Install skills
+# 1. Clone or fork ARIS, then use this repo itself as the workspace
 git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
-cp -r Auto-claude-code-research-in-sleep/skills/* ~/.claude/skills/
+cd Auto-claude-code-research-in-sleep
 
 # 2. Set up Codex MCP (for review skills)
 npm install -g @openai/codex
 codex setup                    # set model to gpt-5.4 when prompted
 claude mcp add codex -s user -- codex mcp-server
 
-# 3. Use in Claude Code
+# 3. Use from the ARIS repo root
 claude
 > /idea-discovery "your research direction"  # Workflow 1 — be specific! not "NLP" but "factorized gap in discrete diffusion LMs"
 > /experiment-bridge                         # Workflow 1.5 — have a plan? implement + deploy + collect results
@@ -118,7 +118,7 @@ claude
 
 > **Important:** Codex MCP uses the model from `~/.codex/config.toml`, not from skill files. Make sure it says `model = "gpt-5.4"` (recommended). Other options: `gpt-5.3-codex`, `gpt-5.2-codex`, `o3`. Run `codex setup` or edit the file directly.
 
-> **Want Codex to execute but Claude Code to review?** See [`docs/CODEX_CLAUDE_REVIEW_GUIDE.md`](docs/CODEX_CLAUDE_REVIEW_GUIDE.md). That path installs the base `skills/skills-codex/*`, then overlays `skills/skills-codex-claude-review/*`, and routes review-heavy skills through the local `claude-review` MCP bridge.
+> **Want Codex to execute but Claude Code to review?** See [`docs/CODEX_CLAUDE_REVIEW_GUIDE.md`](docs/CODEX_CLAUDE_REVIEW_GUIDE.md). That path keeps `skills/skills-codex/*` and `skills/skills-codex-claude-review/*` repo-local inside this ARIS workspace and routes review-heavy skills through the local `claude-review` MCP bridge.
 
 See [full setup guide](#%EF%B8%8F-setup) for details and [alternative model combinations](#-alternative-model-combinations) if you don't have Claude/OpenAI API.
 
@@ -128,7 +128,7 @@ See [full setup guide](#%EF%B8%8F-setup) for details and [alternative model comb
 - 🔍 **Literature & novelty** — multi-source paper search (**[Zotero](#-zotero-integration-optional)** + **[Obsidian](#-obsidian-integration-optional)** + **local PDFs** + arXiv/Scholar) + cross-model novelty verification
 - 💡 **Idea discovery** — literature survey → brainstorm 8-12 ideas → novelty check → GPU pilot experiments → ranked report
 - 🧠 **Repo-local research memory** — `memory/ideation-memory.md` and `memory/experiment-memory.md` capture reusable lessons, not just logs, and are read before new searches / redesigns
-- 📦 **Repo-local vendor skill staging** — `tools/aris_skill_manager.py` installs third-party skills into `vendor-skills/` first; only explicit `sync-global` publishes them into `~/.codex/skills/` or `~/.claude/skills/`
+- 📦 **Repo-local vendor skill staging** — `tools/aris_skill_manager.py` installs third-party skills into `vendor-skills/` and keeps them workspace-local
 - 🔄 **Origin-first fork auto-sync** — `tools/aris_upstream_sync.py` can converge `update` into `main`, keep a single long-lived `main`, fast-forward local `main` from `origin/main` when needed, block on `origin` divergence, then merge `upstream/main`, validate, and push back to `origin/main`
 - 🔄 **Auto review loop** — 4-round autonomous review, 5/10 → 7.5/10 overnight with 20+ GPU experiments
 - 📝 **Paper writing** — narrative → outline → figures → LaTeX → PDF → auto-review (4/10 → 8.5/10), one command. Anti-hallucination citations via [DBLP](https://dblp.org)/[CrossRef](https://www.crossref.org)
@@ -353,7 +353,7 @@ Already have an experiment plan (from Workflow 1 or your own)? `/experiment-brid
 5. 🚀 **Deploy** full experiment suite to GPU via `/run-experiment`
 6. 📊 **Collect** initial results plus runtime evidence and update the experiment tracker
 
-Workflow 1.5 now also reads `memory/experiment-memory.md` before experiment redesigns and can reuse repo-local third-party skills staged in `vendor-skills/`. The staged skills stay local to this repo unless you explicitly run `python3 tools/aris_skill_manager.py sync-global --target auto`.
+Workflow 1.5 now also reads `memory/experiment-memory.md` before experiment redesigns and can reuse repo-local third-party skills staged in `vendor-skills/`. Those staged skills stay local to this repo by design.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -598,7 +598,7 @@ After Workflow 3 generates the paper, `/auto-paper-improvement-loop` runs 2 roun
 | Skill / Tool | Description | Codex MCP? |
 |-------|-------------|:---:|
 | 🧠 [`research-memory`](skills/research-memory/SKILL.md) | Repo-local reflection + memory update for ideation, experiment, and review lessons. Writes to `memory/` and keeps reusable heuristics out of raw logs | No |
-| 📦 [`tools/aris_skill_manager.py`](tools/aris_skill_manager.py) | Install third-party skills into `vendor-skills/`, inspect them, uninstall them, or explicitly sync selected ones to `~/.codex/skills/` / `~/.claude/skills/` | No |
+| 📦 [`tools/aris_skill_manager.py`](tools/aris_skill_manager.py) | Install third-party skills into `vendor-skills/`, inspect them, and uninstall them while keeping extensions repo-local | No |
 | 🔄 [`tools/aris_upstream_sync.py`](tools/aris_upstream_sync.py) | Keep a fork on a single long-lived `main`, sync local `main` from `origin/main` first, then merge `upstream/main`, validate, and push back to `origin/main` | No |
 
 ### 📝 Workflow 3: Paper Writing
@@ -651,23 +651,22 @@ After Workflow 3 generates the paper, `/auto-paper-improvement-loop` runs 2 roun
    ```
    > If you only need Workflow 1 & 2 (idea discovery + auto review), Workflow 3 bootstrap is not required.
 
-### Install Skills
+### Get The Workspace
 
 ```bash
 git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
 cd Auto-claude-code-research-in-sleep
-
-# Install all skills globally
-cp -r skills/* ~/.claude/skills/
-
-# Or install specific skills
-cp -r skills/auto-review-loop ~/.claude/skills/
-cp -r skills/research-lit ~/.claude/skills/
 ```
+
+ARIS now supports only **repo workspace mode**:
+
+- keep `skills/`, `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/` inside this repo
+- run entry workflows from this repo root
+- do not copy skills into `~/.claude/skills/` or `~/.codex/skills/`
 
 ### Repo-Local Vendor Skills & Memory
 
-ARIS now supports repo-local extensions without touching your global skill directory first:
+ARIS keeps third-party extensions repo-local:
 
 ```bash
 # Stage a third-party skill inside this repo only
@@ -679,9 +678,6 @@ python3 tools/aris_skill_manager.py install --source owner/repo@skill-name
 # Inspect local staged skills
 python3 tools/aris_skill_manager.py list
 python3 tools/aris_skill_manager.py info --name skill-name
-
-# Publish selected repo-local skills to the real global directory only when you mean it
-python3 tools/aris_skill_manager.py sync-global --target auto
 ```
 
 Repo-local memory lives under `memory/`:
@@ -689,7 +685,7 @@ Repo-local memory lives under `memory/`:
 - `memory/ideation-memory.md`
 - `memory/experiment-memory.md`
 
-Deleting this repo deletes `vendor-skills/` and `memory/` with it. Only skills explicitly synced into `~/.codex/skills/` or `~/.claude/skills/` survive outside the repo.
+Deleting this repo deletes `vendor-skills/` and `memory/` with it by design.
 
 ### Sync This Fork With Upstream
 
@@ -741,23 +737,14 @@ Safety rules:
 - sync runs on `main` and leaves the repo on `main`
 - only `main` remains the long-lived branch; backup refs/tags may still exist internally
 
-### Manual Skill Updates (Fallback)
+### Update This Repo
+
+Use repo sync, not copied skill files:
 
 ```bash
-cd Auto-claude-code-research-in-sleep
-git pull
-
-# Option A: Full update (overwrites all skills with latest version)
-cp -r skills/* ~/.claude/skills/
-
-# Option B: Safe update (only add NEW skills, keep your customizations)
-cp -rn skills/* ~/.claude/skills/
-
-# Option C: Update specific skills only
-cp -r skills/experiment-bridge ~/.claude/skills/
+python3 tools/aris_upstream_sync.py status
+python3 tools/aris_upstream_sync.py sync
 ```
-
-> 💡 Use this fallback only if you're manually copying skills into `~/.claude/skills/` or `~/.codex/skills/`. Fork-based ARIS development should prefer `tools/aris_upstream_sync.py` and keep customization on `main`.
 
 ### Usage
 
@@ -1301,12 +1288,11 @@ Mix and match freely using the generic `llm-chat` MCP server. Supports any OpenA
 
 Example combinations: GLM + DeepSeek, Kimi + MiniMax, Claude + DeepSeek, LongCat + GLM, etc.
 
-### After Setup: Install Skills & Verify
+### After Setup: Open The Repo & Verify
 
 ```bash
 git clone https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep.git
 cd Auto-claude-code-research-in-sleep
-cp -r skills/* ~/.claude/skills/
 claude
 ```
 
