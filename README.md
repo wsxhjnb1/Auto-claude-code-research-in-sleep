@@ -79,16 +79,18 @@ claude mcp add codex -s user -- codex mcp-server
 # 3. Use from the ARIS repo root
 # This repo already ships project-level Claude skills in `.claude/skills/`,
 # so starting Claude from this repo root exposes the main ARIS workflow slash commands directly.
-# The first main-entry call creates and activates a plain `research/<slug>/`; later stages reuse that active workspace by default.
+# The first main-entry call creates and activates a plain `research/<slug>/`; long topics are condensed into a short English workspace name first.
+# Passing an existing `research/<slug>` directory name, saved research title, or original topic reopens that workspace directly.
 # You can later turn that workspace into its own Git repo with `python3 tools/aris_research_workspace.py git-init`,
 # or hydrate it directly from an existing GitHub repo with `python3 tools/aris_research_workspace.py clone-repo --repo-url ...`.
 # Git-backed research workspaces are versioned by their own Git history; the outer ARIS repo ignores `research/**`.
 claude
-> /idea-discovery "your research direction"  # Workflow 1 — be specific! not "NLP" but "factorized gap in discrete diffusion LMs"
+> /idea-discovery "your research direction"  # Workflow 1 — long topics are auto-condensed to a short workspace name
 > /experiment-bridge                         # Workflow 1.5 — have a plan? implement + deploy + collect results
 > /auto-review-loop "your paper topic or scope"  # Workflow 2: review → fix → re-review overnight
 > /paper-writing "NARRATIVE_REPORT.md"       # Workflow 3: narrative (or synthesized handoff) from the active research workspace → polished PDF
 > /research-pipeline "your research direction"  # Full pipeline: Workflow 1 → 1.5 → 2 → 3 end-to-end
+> /research-pipeline "discrete-diffusion-gap"   # Reopen an existing research workspace by directory name
 ```
 
 > 📝 **Templates available!** See [`templates/`](templates/) for ready-to-use input templates for every workflow — [research brief](templates/RESEARCH_BRIEF_TEMPLATE.md) (Workflow 1), [experiment plan](templates/EXPERIMENT_PLAN_TEMPLATE.md) (Workflow 1.5), [narrative report](templates/NARRATIVE_REPORT_TEMPLATE.md) (Workflow 3), [paper plan](templates/PAPER_PLAN_TEMPLATE.md) (Workflow 3).
@@ -438,7 +440,7 @@ Each major round now ends with a short reflection and a `/research-memory "revie
 
 **🛡️ Key safety features:**
 
-- 🔒 **MAX_ROUNDS = 4** — prevents infinite loops; stops early if score threshold is met
+- 🔒 **MAX_ROUNDS = 10** — prevents infinite loops; stops early if score threshold is met
 - ⏱️ **> 4 GPU-hour experiments skipped** — won't launch massive jobs; flags them for manual follow-up
 - 🧠 **Prefer reframing over new experiments** — when both can address a weakness, chooses the cheaper path
 - 🪞 **No hiding weaknesses** — explicit rule: "Do NOT hide weaknesses to game a positive score"
@@ -1153,8 +1155,8 @@ Override inline: `/research-pipeline "topic" — auto proceed: false, illustrati
 
 | Constant | Default | Description |
 |----------|---------|-------------|
-| `MAX_ROUNDS` | 4 | Maximum review→fix→re-review iterations |
-| `POSITIVE_THRESHOLD` | 6/10 | Score at which the loop stops (submission-ready) |
+| `MAX_ROUNDS` | 10 | Maximum review→fix→re-review iterations |
+| `POSITIVE_THRESHOLD` | 9/10 | Score at which the loop stops (submission-ready) |
 | `> 4 GPU-hour skip` | 4h | Experiments exceeding this are flagged for manual follow-up |
 
 ### Idea Discovery (`idea-discovery` / `idea-creator`)

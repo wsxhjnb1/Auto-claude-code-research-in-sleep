@@ -65,6 +65,7 @@ class ResearchWorkspace:
     slug: str
     path: Path
     repo_root: Path
+    topic: str | None = None
     workspace_mode: str = WORKSPACE_MODE_PLAIN
     source_kind: str = SOURCE_KIND_NEW
     git_origin_url: str | None = None
@@ -86,6 +87,8 @@ class ResearchWorkspace:
             "workspace_mode": self.workspace_mode,
             "source_kind": self.source_kind,
         }
+        if self.topic:
+            payload["topic"] = self.topic
         if self.git_origin_url:
             payload["git_origin_url"] = self.git_origin_url
         if self.git_default_branch:
@@ -115,6 +118,7 @@ def _workspace_from_slug(repo_root: Path, slug: str, *, name: str | None = None)
         slug=slug,
         path=path,
         repo_root=repo_root,
+        topic=str(metadata.get("topic") or "").strip() or None,
         workspace_mode=workspace_mode,
         source_kind=str(
             metadata.get("source_kind")
@@ -152,6 +156,72 @@ def _detect_workspace_mode(path: Path, metadata: dict[str, Any] | None = None) -
 
 def _is_git_workspace(path: Path) -> bool:
     return (path / ".git").exists()
+
+
+def _normalize_match_value(value: str | None) -> str:
+    if value is None:
+        return ""
+    return re.sub(r"\s+", " ", value).strip().casefold()
+
+
+def _iter_existing_workspaces(repo_root: Path) -> list[ResearchWorkspace]:
+    research_root = repo_root / "research"
+    if not research_root.exists():
+        return []
+    workspaces: list[ResearchWorkspace] = []
+    for child in sorted(research_root.iterdir(), key=lambda path: path.name):
+        if not child.is_dir():
+            continue
+        workspaces.append(_workspace_from_slug(repo_root, child.name))
+    return workspaces
+
+
+def _find_existing_workspace(repo_root: Path, query: str) -> ResearchWorkspace | None:
+    normalized_query = _normalize_match_value(query)
+    if not normalized_query:
+        return None
+
+    tiers: list[tuple[str, list[ResearchWorkspace]]] = []
+    workspaces = _iter_existing_workspaces(repo_root)
+    tiers.append(
+        (
+            "slug",
+            [workspace for workspace in workspaces if _normalize_match_value(workspace.slug) == normalized_query],
+        )
+    )
+    tiers.append(
+        (
+            "name",
+            [workspace for workspace in workspaces if _normalize_match_value(workspace.name) == normalized_query],
+        )
+    )
+    tiers.append(
+        (
+            "topic",
+            [workspace for workspace in workspaces if _normalize_match_value(workspace.topic) == normalized_query],
+        )
+    )
+
+    for label, matches in tiers:
+        if not matches:
+            continue
+        if len(matches) == 1:
+            return matches[0]
+        options = ", ".join(f"research/{workspace.slug}" for workspace in matches)
+        raise WorkspaceError(
+            f"Multiple research workspaces match {query!r} by {label}: {options}. "
+            "Use an explicit `research/<slug>` path."
+        )
+    return None
+
+
+def _next_available_slug(repo_root: Path, base_slug: str) -> str:
+    candidate = base_slug
+    counter = 2
+    while (repo_root / "research" / candidate).exists():
+        candidate = f"{base_slug}-{counter}"
+        counter += 1
+    return candidate
 
 
 def _run_git(args: list[str], *, cwd: Path) -> str:
@@ -272,6 +342,7 @@ def _refresh_workspace_metadata(
         "name": workspace.name,
         "slug": workspace.slug,
         "path": workspace.relative_path,
+        "topic": str(existing.get("topic") or workspace.topic or "").strip() or None,
         "workspace_mode": workspace_mode,
         "source_kind": resolved_source_kind,
         "created_at": created_at,
@@ -287,6 +358,7 @@ def _refresh_workspace_metadata(
         slug=workspace.slug,
         path=workspace.path,
         repo_root=workspace.repo_root,
+        topic=str(payload.get("topic") or "") or None,
         workspace_mode=workspace_mode,
         source_kind=resolved_source_kind,
         git_origin_url=str(payload.get("git_origin_url") or "") or None,
@@ -331,12 +403,43 @@ def ensure_workspace(
     *,
     repo_root: Path = DEFAULT_REPO_ROOT,
     research_name: str,
+    topic: str | None = None,
 ) -> ResearchWorkspace:
     research_name = research_name.strip()
     if not research_name:
         raise WorkspaceError("Research name is empty.")
-    slug = slugify_research_name(research_name)
+    topic = (topic or "").strip() or None
+
+    if topic:
+        existing_by_topic = _find_existing_workspace(repo_root, topic)
+        if existing_by_topic is not None:
+            existing_by_topic = _refresh_workspace_metadata(existing_by_topic)
+            set_active_workspace(existing_by_topic)
+            return existing_by_topic
+
+    existing = _find_existing_workspace(repo_root, research_name)
+    if existing is not None:
+        if not topic or not existing.topic or _normalize_match_value(existing.topic) == _normalize_match_value(topic):
+            existing = _refresh_workspace_metadata(
+                ResearchWorkspace(
+                    name=existing.name,
+                    slug=existing.slug,
+                    path=existing.path,
+                    repo_root=existing.repo_root,
+                    topic=existing.topic or topic,
+                    workspace_mode=existing.workspace_mode,
+                    source_kind=existing.source_kind,
+                    git_origin_url=existing.git_origin_url,
+                    git_default_branch=existing.git_default_branch,
+                )
+            )
+            set_active_workspace(existing)
+            return existing
+
+    base_slug = slugify_research_name(research_name)
+    slug = _next_available_slug(repo_root, base_slug)
     workspace = _workspace_from_slug(repo_root, slug, name=research_name)
+    workspace.topic = topic
     workspace = _refresh_workspace_metadata(workspace)
     set_active_workspace(workspace)
     return workspace
@@ -397,7 +500,9 @@ def resolve_workspace_for_stage(
 
     chosen_name = (research_name or "").strip() or extract_research_name_override(arguments)
     if chosen_name:
-        return ensure_workspace(repo_root=repo_root, research_name=chosen_name)
+        primary = _primary_argument(arguments)
+        topic = primary if primary and _normalize_match_value(primary) != _normalize_match_value(chosen_name) else None
+        return ensure_workspace(repo_root=repo_root, research_name=chosen_name, topic=topic)
 
     if stage in MAIN_ENTRY_STAGES:
         primary = _primary_argument(arguments)
@@ -406,7 +511,12 @@ def resolve_workspace_for_stage(
                 f"No research name could be derived for stage {stage!r}. "
                 "Provide a main argument or use `research name:`."
             )
-        return ensure_workspace(repo_root=repo_root, research_name=primary)
+        existing = _find_existing_workspace(repo_root, primary)
+        if existing is not None:
+            existing = _refresh_workspace_metadata(existing)
+            set_active_workspace(existing)
+            return existing
+        return ensure_workspace(repo_root=repo_root, research_name=primary, topic=primary)
 
     active = get_active_workspace(repo_root=repo_root)
     if active is not None:

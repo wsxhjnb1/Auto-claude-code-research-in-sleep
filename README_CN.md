@@ -78,16 +78,18 @@ claude mcp add codex -s user -- codex mcp-server
 # 3. 在 ARIS repo 根目录内使用
 # 当前仓库已内置 `.claude/skills/` 项目级 Claude skills，
 # 所以从 repo 根目录启动 Claude 后会直接出现主要工作流的 slash 命令。
-# 第一次主入口调用会创建并激活一个 plain `research/<slug>/`；后续阶段默认复用这个 active research。
+# 第一次主入口调用会创建并激活一个 plain `research/<slug>/`；长 topic 会先自动精练成简短英文 workspace 名。
+# 直接传已有的 `research/<slug>` 目录名、已保存的研究标题或原始 topic，也会直接复用对应 workspace。
 # 之后可按需用 `python3 tools/aris_research_workspace.py git-init` 把它接管成独立 Git 仓库，
 # 或用 `python3 tools/aris_research_workspace.py clone-repo --repo-url ...` 直接把现有 GitHub 仓库导入为 workspace 根。
 # 一旦某个 research workspace 变成 git-backed，它的版本历史就由该目录自己的 Git 管理；外层 ARIS 仓库会忽略 `research/**`。
 claude
-> /idea-discovery "你的研究方向"              # 工作流 1 — 方向要具体！不要 "NLP"，要 "离散扩散语言模型的 factorized gap"
+> /idea-discovery "你的研究方向"              # 工作流 1 — 长 topic 会自动精练成短 workspace 名
 > /experiment-bridge                         # 工作流 1.5 — 有计划了？实现 + 部署 + 收结果
 > /auto-review-loop "你的论文主题或范围"         # 工作流 2：审稿 → 修复 → 再审，一夜完成
 > /paper-writing "NARRATIVE_REPORT.md"       # 工作流 3：从当前 active research 工作区里的研究叙事（或自动合成 handoff）→ 精修 PDF
 > /research-pipeline "你的研究方向"            # 全流程：工作流 1 → 1.5 → 2 → 3 端到端
+> /research-pipeline "discrete-diffusion-gap"  # 直接按目录名重新进入已有 research workspace
 ```
 
 > 📝 **模板可用！** 见 [`templates/`](templates/) 目录——每个工作流都有现成输入模板：[研究简报](templates/RESEARCH_BRIEF_TEMPLATE.md)（工作流 1）、[实验计划](templates/EXPERIMENT_PLAN_TEMPLATE.md)（工作流 1.5）、[研究叙事](templates/NARRATIVE_REPORT_TEMPLATE.md)（工作流 3）、[论文大纲](templates/PAPER_PLAN_TEMPLATE.md)（工作流 3）。
@@ -379,7 +381,7 @@ Workflow 1.5 现在也会在重设计实验前先读 `memory/experiment-memory.m
 
 **🛡️ 关键安全机制：**
 
-- 🔒 **MAX_ROUNDS = 4** — 防止无限循环；达到分数阈值时提前停止
+- 🔒 **MAX_ROUNDS = 10** — 防止无限循环；达到分数阈值时提前停止
 - ⏱️ **> 4 GPU-hour 的实验自动跳过** — 不会启动超大实验，标记为"需人工跟进"
 - 🧠 **优先改叙事而非跑新实验** — 同样能解决问题时，选择成本更低的路径
 - 🪞 **不隐藏弱点** — 明确规则："不要隐藏弱点来骗高分"
@@ -1057,8 +1059,8 @@ Skills 就是普通的 Markdown 文件，fork 后随意改：
 
 | 常量 | 默认值 | 说明 |
 |------|--------|------|
-| `MAX_ROUNDS` | 4 | 最多 review→修复→再 review 轮数 |
-| `POSITIVE_THRESHOLD` | 6/10 | 达到此分数自动停止（可投稿） |
+| `MAX_ROUNDS` | 10 | 最多 review→修复→再 review 轮数 |
+| `POSITIVE_THRESHOLD` | 9/10 | 达到此分数自动停止（可投稿） |
 | `> 4 GPU-hour 跳过` | 4h | 超过此时长的实验标记为"需人工跟进" |
 
 ### 找 Idea（`idea-discovery` / `idea-creator`）

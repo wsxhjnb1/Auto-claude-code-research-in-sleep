@@ -28,8 +28,8 @@ Later review rounds default to the active research workspace. To switch, include
 
 ## Constants
 
-- MAX_ROUNDS = 4
-- POSITIVE_THRESHOLD: score >= 6/10, or verdict contains "accept", "sufficient", "ready for submission"
+- MAX_ROUNDS = 10
+- POSITIVE_THRESHOLD: score >= 9/10, or verdict contains "accept", "sufficient", "ready for submission"
 - REVIEW_DOC: `$RESEARCH_ROOT/AUTO_REVIEW.md` (cumulative log)
 - **REVIEWER_MODEL = `claude-review`** — Claude reviewer invoked through the local `claude-review` MCP bridge. Set `CLAUDE_REVIEW_MODEL` if you need a specific Claude model override.
 - **HUMAN_CHECKPOINT = false** — When `true`, pause after each round's review (Phase B) and present the score + weaknesses to the user. Wait for user input before proceeding to Phase C. The user can: approve the suggested fixes, provide custom modification instructions, skip specific fixes, or stop the loop early. When `false` (default), the loop runs fully autonomously.

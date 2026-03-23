@@ -22,13 +22,20 @@ When Claude Code is started from the ARIS repo root, the project-level wrapper a
 Resolve the research workspace before Phase 1:
 
 ```bash
-RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage idea-discovery --arguments "$ARGUMENTS" --print-path)"
+RESEARCH_NAME="<existing workspace identifier or short English research name>"
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage idea-discovery --arguments "$ARGUMENTS" --research-name "$RESEARCH_NAME" --print-path)"
+echo "Original topic: $ARGUMENTS"
+echo "Resolved research name: $RESEARCH_NAME"
 echo "Using research workspace: $RESEARCH_ROOT"
 ```
 
 Behavior:
 
+- If `$ARGUMENTS` already matches an existing workspace `research/<slug>` path, slug, saved research title, or saved original topic, reuse that workspace directly.
+- Otherwise, first compress the long topic into a short English research name (2-5 words, ASCII-friendly, directory-safe), then pass that short name via `--research-name`.
 - The first Workflow 1 call creates `research/<slug>/` and marks it active.
+- New workspaces store both the short research `name` and the original long `topic` in workspace metadata.
+- If two unrelated topics collapse to the same short slug, the resolver assigns `-2`, `-3`, ... suffixes instead of merging them.
 - Reusing the same research name reuses the same workspace so idea reports, proposal drafts, and experiment plans stay together.
 - Later stages such as `/experiment-bridge` and `/paper-writing` reuse the active research unless you include `research name: <name>` inline.
 - Repo-level `memory/` remains shared across the repo; research artifacts move into `$RESEARCH_ROOT`.

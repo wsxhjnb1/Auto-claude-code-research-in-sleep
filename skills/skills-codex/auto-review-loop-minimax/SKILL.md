@@ -22,8 +22,8 @@ Treat review artifacts, runtime state, and experiment evidence as relative to `$
 
 ## Constants
 
-- MAX_ROUNDS = 4
-- POSITIVE_THRESHOLD: score >= 6/10, or verdict contains "accept", "sufficient", "ready for submission"
+- MAX_ROUNDS = 10
+- POSITIVE_THRESHOLD: score >= 9/10, or verdict contains "accept", "sufficient", "ready for submission"
 - REVIEW_DOC: `$RESEARCH_ROOT/AUTO_REVIEW.md` (cumulative log)
 - REVIEWER_MODEL = `MiniMax-M2.5` — Model used via MiniMax API
 
