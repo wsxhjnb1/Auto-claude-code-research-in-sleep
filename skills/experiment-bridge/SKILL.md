@@ -403,9 +403,10 @@ As experiments complete:
 
 1. **Parse output files** (JSON/CSV/logs) for key metrics
 2. **Parse `refine-logs/EXPERIMENT_RUNTIME.json`** for wall time, exit code, GPU memory, throughput, and failure signatures
-3. **Update `refine-logs/EXPERIMENT_TRACKER.md`** — fill in Status and Notes columns
-4. **Check success criteria** from `EXPERIMENT_PLAN.md` — did each experiment meet its bar?
-5. **Write initial results summary**:
+3. **Training quality check** — if W&B data is available (CLAUDE.md has `wandb: true` and `wandb_project`), invoke `/training-check` to detect NaN, loss divergence, plateaus, or overfitting. If W&B is not configured, skip silently.
+4. **Update `refine-logs/EXPERIMENT_TRACKER.md`** — fill in Status and Notes columns
+5. **Check success criteria** from `EXPERIMENT_PLAN.md` — did each experiment meet its bar?
+6. **Write initial results summary**:
 
 ```markdown
 # Initial Experiment Results
@@ -441,6 +442,17 @@ As experiments complete:
 - Main result: [positive / negative / inconclusive]
 - Ready for /auto-review-loop: [YES / NO]
 ```
+
+### Phase 5.5: Auto Ablation Planning
+
+After main experiments (M2) complete with positive results, invoke `/ablation-planner` to design ablation studies:
+
+- Read the main results and method description
+- Generate a claim-driven ablation plan: which components to remove, what to compare, expected outcomes
+- Append ablation blocks to `refine-logs/EXPERIMENT_PLAN.md` and `refine-logs/EXPERIMENT_TRACKER.md`
+- If main results are negative or inconclusive, skip ablation planning and note in the summary
+
+If `/ablation-planner` is not available, skip silently — the existing EXPERIMENT_PLAN.md ablation blocks (if any) remain unchanged.
 
 ### Phase 6: Handoff
 
