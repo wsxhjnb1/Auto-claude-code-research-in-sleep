@@ -30,3 +30,4 @@ research/**
 refine-logs/UPSTREAM_SYNC_STATE.json
 refine-logs/UPSTREAM_SYNC_LOG.md
 refine-logs/UPSTREAM_SYNC_CONFLICT_REPORT.md
+refine-logs/PAPER_RUNTIME_STATE.json
