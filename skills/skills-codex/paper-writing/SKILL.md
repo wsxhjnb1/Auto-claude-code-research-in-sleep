@@ -24,6 +24,13 @@ If `NARRATIVE_REPORT.md` is missing but Workflow 2 artifacts exist, synthesize i
 - **PAPER_AUTO_INSTALL = true**
 - **PAPER_VENV_DIR = `.venv`**
 - **PAPER_SYSTEM_INSTALL = `auto`**
+- **SYNC_LOCAL_REMOTE = `origin`**
+- **SYNC_REMOTE = `upstream`**
+- **SYNC_BRANCH = `main`**
+- **SYNC_TARGET_BRANCH = `main`**
+- **SYNC_ON_ENTRY = true**
+- **SYNC_PUSH = true**
+- **SYNC_BRANCH_MODE = `main_only`**
 - **MAX_IMPROVEMENT_ROUNDS = 2**
 - **AUTO_PROCEED = true**
 - **HUMAN_CHECKPOINT = false**
@@ -39,6 +46,16 @@ This workflow can start from:
 3. existing `PAPER_PLAN.md`
 
 ## Pipeline
+
+### Phase -2: Main-Branch Sync
+
+Before Workflow 3 starts, try:
+
+```bash
+python3 tools/aris_upstream_sync.py sync
+```
+
+Continue on success, "no updates", or a temporary fetch / network failure. If the sync reports tracked worktree changes, local `main` vs `origin/main` divergence, a migration blocker, or an unresolved sync conflict, stop and fix the repo state first. The sync flow is origin-first and should leave the repo on `main`.
 
 ### Phase -1: Runtime Bootstrap
 

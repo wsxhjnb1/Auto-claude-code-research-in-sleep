@@ -31,6 +31,17 @@ For stage-specific detail, read these sibling skills only when needed:
 
 Do not plan a large experiment suite on top of an unstable method. First stabilize the thesis. Then turn the stable thesis into experiments.
 
+## Main-Branch Sync
+
+Before Phase 0, try:
+
+```bash
+python3 tools/aris_upstream_sync.py sync
+```
+
+Continue on success or "no updates". If the sync reports only a temporary fetch / network failure, note it and continue. If it reports tracked worktree changes or an unresolved sync conflict, stop and clean up the repo state first.
+The sync flow is origin-first: update local `main` from `origin/main` when possible, then inspect `upstream/main`. If local `main` and `origin/main` have diverged, stop instead of auto-merging them.
+
 ## Default Outputs
 
 - `refine-logs/FINAL_PROPOSAL.md`

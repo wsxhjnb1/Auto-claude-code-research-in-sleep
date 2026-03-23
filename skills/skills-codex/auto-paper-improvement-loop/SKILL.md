@@ -19,6 +19,13 @@ Unlike `/auto-review-loop` (which iterates on **research** — running experimen
 - **REVIEWER_MODEL = `gpt-5.4`** — Model used via a secondary Codex agent for paper review.
 - **REVIEW_LOG = `PAPER_IMPROVEMENT_LOG.md`** — Cumulative log of all rounds, stored in paper directory.
 - **HUMAN_CHECKPOINT = false** — When `true`, pause after each round's review and present score + weaknesses to the user. The user can approve fixes, provide custom modification instructions, skip specific fixes, or stop early. When `false` (default), runs fully autonomously.
+- **SYNC_LOCAL_REMOTE = `origin`**
+- **SYNC_REMOTE = `upstream`**
+- **SYNC_BRANCH = `main`**
+- **SYNC_TARGET_BRANCH = `main`**
+- **SYNC_ON_ENTRY = true**
+- **SYNC_PUSH = true**
+- **SYNC_BRANCH_MODE = `main_only`**
 
 > 💡 Override: `/auto-paper-improvement-loop "paper/" — human checkpoint: true`
 
@@ -46,6 +53,16 @@ If the context window fills up mid-loop, Codex auto-compacts. To recover, this s
 **After each round**: overwrite the state file. **On completion**: set `"status": "completed"`.
 
 ## Workflow
+
+### Step -1: Main-Branch Sync
+
+Before Step 0, try:
+
+```bash
+python3 tools/aris_upstream_sync.py sync
+```
+
+Continue on success, "no updates", or a temporary fetch / network failure. If the sync reports tracked worktree changes, local `main` vs `origin/main` divergence, or an unresolved sync conflict, stop and fix the repo state first. The sync flow is origin-first and should leave the repo on `main`.
 
 ### Step 0: Preserve Original
 

@@ -28,6 +28,7 @@
 
 ## 📢 最近更新
 
+- **2026-03-23** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🔄 **先 origin、再 upstream 的自动同步 + 单主线 main** — 现在可以用 `tools/aris_upstream_sync.py` 把长期开发收敛到单一 `main`：先处理本地 `main` 和 `origin/main`，再检查 `upstream/main`，验证并回推到 `origin/main`
 - **2026-03-23** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧠 **Repo 本地 memory + vendor skills** — ARIS 现在内置 `memory/`（工作区本地的 idea / experiment 记忆）和 `tools/aris_skill_manager.py`（把第三方 skill 先安装到 `vendor-skills/`，不直接污染全局 skill 目录）
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ♻️ **长任务自动续跑契约** — Workflow 1.5 现在把“缺 checkpoint / auto-resume 支持”视为任意多步或约 10 分钟以上长任务的正确性 blocker。`EXPERIMENT_RUNTIME.json` 会记录输出目录、checkpoint 和 resume 元数据，方便下一个 AI 会话从最新有效 checkpoint 继续
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ⚔️ **实验辩论循环** — `/experiment-bridge` 默认升级为有界双 AI 辩论循环（`code review mode: debate`），支持运行时复审回流，并产出结构化 `EXPERIMENT_DEBATE_LOG.md` 与可解析的 `EXPERIMENT_RUNTIME.json`
@@ -127,6 +128,7 @@ claude
 - 💡 **Idea 发现** — 文献调研 → 头脑风暴 8-12 个 idea → 查新 → GPU pilot 实验 → 排名报告
 - 🧠 **Repo 本地研究记忆** — `memory/ideation-memory.md` 和 `memory/experiment-memory.md` 只服务当前仓库，在新一轮搜索 / 重设计前先读，记录的是可复用经验而不是原始日志
 - 📦 **Repo 本地 vendor skill 暂存** — `tools/aris_skill_manager.py` 先把第三方 skill 装进 `vendor-skills/`；只有显式 `sync-global` 才会发布到 `~/.codex/skills/` 或 `~/.claude/skills/`
+- 🔄 **Fork 的 origin-first 自动同步** — `tools/aris_upstream_sync.py` 可把 `update` 收敛进 `main`，保持单一长期 `main`；当本地 `main` 只是落后于 `origin/main` 时先 fast-forward，若两者分歧则先阻塞报告，只有处理完自己的 `main` 之后才会继续合并 `upstream/main`
 - 🔄 **自动 review 循环** — 4 轮自主审稿，一夜从 5/10 提升到 7.5/10，自动跑 20+ 组 GPU 实验
 - 📝 **论文写作** — 研究叙事 → 大纲 → 图表 → LaTeX → PDF → 自动审稿（4/10 → 8.5/10），一条命令。通过 [DBLP](https://dblp.org)/[CrossRef](https://www.crossref.org) 反幻觉引用
 - 🤖 **跨模型协作** — Claude Code 执行，GPT-5.4 xhigh 审稿。对抗式而非自我博弈
@@ -530,6 +532,7 @@ NARRATIVE_REPORT.md ──► /paper-plan ──► /paper-figure
 |-------|------|:---:|
 | 🧠 [`research-memory`](skills/research-memory/SKILL.md) | Repo 本地 reflection + memory 更新。把 idea、实验、review 阶段的可复用经验写入 `memory/`，而不是堆原始日志 | 否 |
 | 📦 [`tools/aris_skill_manager.py`](tools/aris_skill_manager.py) | 将第三方 skill 安装到 `vendor-skills/`，支持查看、卸载，或显式同步到 `~/.codex/skills/` / `~/.claude/skills/` | 否 |
+| 🔄 [`tools/aris_upstream_sync.py`](tools/aris_upstream_sync.py) | 让 fork 只保留一个长期 `main`，先把本地 `main` 和 `origin/main` 对齐，再处理 `upstream/main`，验证后回推到 `origin/main` | 否 |
 
 ### 📝 工作流 3：论文写作
 
@@ -621,7 +624,57 @@ Repo 本地 memory 默认放在：
 
 删除当前 repo 时，`vendor-skills/` 和 `memory/` 会一起消失。只有显式同步到 `~/.codex/skills/` 或 `~/.claude/skills/` 的 skill 会保留在仓库之外。
 
-### 更新 Skills
+### 让 Fork 自动跟上上游
+
+如果你是在自己的 fork 上开发 ARIS，推荐的新默认路径是：
+
+- 只保留一个长期分支：`main`
+- 在主入口 workflow 前先检查 `origin/main`，再检查 `upstream/main`
+- 如果本地 `main` 只是落后于 `origin/main`，先 fast-forward 自己的 `main`
+- 自动把上游更新合并进本地 `main`
+- 验证通过后自动推回 `origin/main`
+
+```bash
+# 一次性迁移：把当前 update 收敛进 main，
+# 创建备份 refs/tags，推送 origin/main，然后删除 update
+python3 tools/aris_upstream_sync.py migrate-to-main
+
+# 查看 upstream/main 是否有新提交
+python3 tools/aris_upstream_sync.py status
+
+# 拉取 upstream/main，自动合并到本地 main，验证并推送 origin/main
+python3 tools/aris_upstream_sync.py sync
+```
+
+默认同步契约：
+
+- `SYNC_LOCAL_REMOTE=origin`
+- `SYNC_REMOTE=upstream`
+- `SYNC_BRANCH=main`
+- `SYNC_TARGET_BRANCH=main`
+- `SYNC_ON_ENTRY=true`
+- `SYNC_PUSH=true`
+- `SYNC_BRANCH_MODE=main_only`
+
+默认会在这些主入口前先检查：
+
+- `/research-pipeline`
+- `/idea-discovery`
+- `/research-refine-pipeline`
+- `/experiment-bridge`
+- `/auto-review-loop`
+- `/paper-writing`
+- `/auto-paper-improvement-loop`
+
+安全规则：
+
+- 如果当前工作区有 tracked 的未提交修改，就不会直接 auto-merge，只会拉取并分析后暂停
+- 如果本地 `main` 与 `origin/main` 分歧，会直接暂停并报告，不会自动把你自己的分支和远端主线混在一起
+- merge 或验证失败会回退到 `refs/aris/backups/*`
+- 同步会在 `main` 上执行，结束后也停留在 `main`
+- 长期分支只保留 `main`；内部备份 refs / tags 可以继续存在
+
+### 手动更新 Skills（Fallback）
 
 ```bash
 cd Auto-claude-code-research-in-sleep
@@ -637,7 +690,7 @@ cp -rn skills/* ~/.claude/skills/
 cp -r skills/experiment-bridge ~/.claude/skills/
 ```
 
-> 💡 **选哪个？** 没改过 skill 用 **A**。改过用 **B**（新 skill 会加进来，你的改动保留——但改过的文件不会收到上游 bug fix）。**C** 精确更新。
+> 💡 只有在你手动把 skills 复制到 `~/.claude/skills/` 或 `~/.codex/skills/` 时，才需要这套 fallback。基于 fork 的 ARIS 开发建议优先用 `tools/aris_upstream_sync.py`，并把定制长期保留在 `main` 上。
 
 ### 🌙 过夜自动运行的免确认配置（可选）
 

@@ -28,6 +28,7 @@ Custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skills for 
 
 ## 📢 What's New
 
+- **2026-03-23** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🔄 **Origin-first auto-sync + single-main fork mode** — ARIS forks can now use `tools/aris_upstream_sync.py` to keep only one long-lived `main`: first reconcile local `main` with `origin/main`, then check `upstream/main`, validate, and push back to `origin/main`
 - **2026-03-23** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧠 **Repo-local memory + vendor skills** — ARIS now ships `memory/` for workspace-local ideation/experiment memory and `tools/aris_skill_manager.py` for staging third-party skills inside `vendor-skills/` without polluting your global skill directory
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ♻️ **Long-run auto-resume contract** — Workflow 1.5 now treats missing checkpoint / auto-resume support as a correctness blocker for any multi-step or ~10+ minute run. `EXPERIMENT_RUNTIME.json` records output/checkpoint/resume metadata so the next AI session can continue from the latest valid checkpoint
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ⚔️ **Experiment debate loop** — `/experiment-bridge` now defaults to a bounded dual-AI debate loop (`code review mode: debate`) with runtime-review re-entry, structured `EXPERIMENT_DEBATE_LOG.md`, and parseable `EXPERIMENT_RUNTIME.json`
@@ -128,6 +129,7 @@ See [full setup guide](#%EF%B8%8F-setup) for details and [alternative model comb
 - 💡 **Idea discovery** — literature survey → brainstorm 8-12 ideas → novelty check → GPU pilot experiments → ranked report
 - 🧠 **Repo-local research memory** — `memory/ideation-memory.md` and `memory/experiment-memory.md` capture reusable lessons, not just logs, and are read before new searches / redesigns
 - 📦 **Repo-local vendor skill staging** — `tools/aris_skill_manager.py` installs third-party skills into `vendor-skills/` first; only explicit `sync-global` publishes them into `~/.codex/skills/` or `~/.claude/skills/`
+- 🔄 **Origin-first fork auto-sync** — `tools/aris_upstream_sync.py` can converge `update` into `main`, keep a single long-lived `main`, fast-forward local `main` from `origin/main` when needed, block on `origin` divergence, then merge `upstream/main`, validate, and push back to `origin/main`
 - 🔄 **Auto review loop** — 4-round autonomous review, 5/10 → 7.5/10 overnight with 20+ GPU experiments
 - 📝 **Paper writing** — narrative → outline → figures → LaTeX → PDF → auto-review (4/10 → 8.5/10), one command. Anti-hallucination citations via [DBLP](https://dblp.org)/[CrossRef](https://www.crossref.org)
 - 🤖 **Cross-model collaboration** — Claude Code executes, GPT-5.4 xhigh reviews. Adversarial, not self-play
@@ -597,6 +599,7 @@ After Workflow 3 generates the paper, `/auto-paper-improvement-loop` runs 2 roun
 |-------|-------------|:---:|
 | 🧠 [`research-memory`](skills/research-memory/SKILL.md) | Repo-local reflection + memory update for ideation, experiment, and review lessons. Writes to `memory/` and keeps reusable heuristics out of raw logs | No |
 | 📦 [`tools/aris_skill_manager.py`](tools/aris_skill_manager.py) | Install third-party skills into `vendor-skills/`, inspect them, uninstall them, or explicitly sync selected ones to `~/.codex/skills/` / `~/.claude/skills/` | No |
+| 🔄 [`tools/aris_upstream_sync.py`](tools/aris_upstream_sync.py) | Keep a fork on a single long-lived `main`, sync local `main` from `origin/main` first, then merge `upstream/main`, validate, and push back to `origin/main` | No |
 
 ### 📝 Workflow 3: Paper Writing
 
@@ -688,7 +691,57 @@ Repo-local memory lives under `memory/`:
 
 Deleting this repo deletes `vendor-skills/` and `memory/` with it. Only skills explicitly synced into `~/.codex/skills/` or `~/.claude/skills/` survive outside the repo.
 
-### Update Skills
+### Sync This Fork With Upstream
+
+If you run ARIS from your own fork, the recommended path is now:
+
+- keep only one long-lived branch: `main`
+- check `origin/main` first, then `upstream/main`, before entry workflows
+- fast-forward local `main` from `origin/main` when it is only behind
+- auto-merge upstream updates into local `main`
+- validate and push back to `origin/main`
+
+```bash
+# One-time migration: fast-forward main to your current update branch,
+# create backup refs/tags, push origin/main, then remove update
+python3 tools/aris_upstream_sync.py migrate-to-main
+
+# Check whether upstream/main has moved
+python3 tools/aris_upstream_sync.py status
+
+# Fetch upstream/main, auto-merge into local main, validate, and push origin/main
+python3 tools/aris_upstream_sync.py sync
+```
+
+Default sync contract:
+
+- `SYNC_LOCAL_REMOTE=origin`
+- `SYNC_REMOTE=upstream`
+- `SYNC_BRANCH=main`
+- `SYNC_TARGET_BRANCH=main`
+- `SYNC_ON_ENTRY=true`
+- `SYNC_PUSH=true`
+- `SYNC_BRANCH_MODE=main_only`
+
+Entry workflows that should check first:
+
+- `/research-pipeline`
+- `/idea-discovery`
+- `/research-refine-pipeline`
+- `/experiment-bridge`
+- `/auto-review-loop`
+- `/paper-writing`
+- `/auto-paper-improvement-loop`
+
+Safety rules:
+
+- tracked uncommitted changes block auto-merge; the sync tool only fetches/analyzes and stops
+- if local `main` diverges from `origin/main`, sync stops and reports the divergence instead of auto-merging your own branch
+- merge failures or validation failures roll back to `refs/aris/backups/*`
+- sync runs on `main` and leaves the repo on `main`
+- only `main` remains the long-lived branch; backup refs/tags may still exist internally
+
+### Manual Skill Updates (Fallback)
 
 ```bash
 cd Auto-claude-code-research-in-sleep
@@ -704,7 +757,7 @@ cp -rn skills/* ~/.claude/skills/
 cp -r skills/experiment-bridge ~/.claude/skills/
 ```
 
-> 💡 **Which option?** Use **A** if you haven't customized any skills. Use **B** if you've modified skills locally (new skills get added, your changes are preserved — but you'll miss upstream bug fixes in modified files). Use **C** to selectively update.
+> 💡 Use this fallback only if you're manually copying skills into `~/.claude/skills/` or `~/.codex/skills/`. Fork-based ARIS development should prefer `tools/aris_upstream_sync.py` and keep customization on `main`.
 
 ### Usage
 

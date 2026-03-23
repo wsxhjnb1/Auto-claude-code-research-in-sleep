@@ -118,6 +118,8 @@ def main() -> int:
 
 
 def maybe_reexec_for_phase(phase: str, *, work_dir: Path | None = None) -> None:
+    if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
+        return
     work_dir = Path(work_dir or Path.cwd()).resolve()
     state = ensure_runtime(phase, work_dir=work_dir)
     target_python = Path(state["venv_python"]).resolve()

@@ -13,6 +13,13 @@ End-to-end autonomous research workflow for: **$ARGUMENTS**
 - **ARXIV_DOWNLOAD = false**
 - **HUMAN_CHECKPOINT = false**
 - **ILLUSTRATION = `ai`**
+- **SYNC_LOCAL_REMOTE = `origin`**
+- **SYNC_REMOTE = `upstream`**
+- **SYNC_BRANCH = `main`**
+- **SYNC_TARGET_BRANCH = `main`**
+- **SYNC_ON_ENTRY = true**
+- **SYNC_PUSH = true**
+- **SYNC_BRANCH_MODE = `main_only`**
 - **REPO_LOCAL_MEMORY = true**
 - **REPO_LOCAL_VENDOR_SKILLS = true**
 
@@ -22,6 +29,22 @@ This skill now orchestrates the full lifecycle:
 
 ```text
 /idea-discovery → /experiment-bridge → /auto-review-loop → narrative synthesis → /paper-writing → submission-ready artifacts
+```
+
+### Stage -1: Main-Branch Sync
+
+Before Workflow 1 starts, try:
+
+```bash
+python3 tools/aris_upstream_sync.py sync
+```
+
+Continue on success, "no updates", or a temporary fetch / network failure. If the sync reports tracked worktree changes, local `main` vs `origin/main` divergence, a migration blocker, or an unresolved sync conflict, stop and fix the repo state first. The sync flow is origin-first and should leave the repo on `main`.
+
+If this repo still uses the old long-lived `update` branch, migrate it once from a clean worktree:
+
+```bash
+python3 tools/aris_upstream_sync.py migrate-to-main
 ```
 
 ### Stage 0: Repo-Local Context Intake
@@ -123,6 +146,7 @@ Output:
 ## Key Rules
 
 - Read repo-local memory before starting and before any experiment redesign.
+- Before entering the main workflow, try `tools/aris_upstream_sync.py sync` and keep the repo on a single long-lived `main` branch.
 - Keep `vendor-skills/` repo-local by default; only `tools/aris_skill_manager.py sync-global` should publish a vendor skill into a global skill directory.
 - Treat reflection + memory update as part of the pipeline contract, not an optional note-taking step.
 - Use `/experiment-bridge`, not a free-form implementation step.

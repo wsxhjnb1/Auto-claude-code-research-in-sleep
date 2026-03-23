@@ -34,6 +34,13 @@ The debate loop is default-enabled in v1. It is framework-agnostic at the core, 
 - **LIGHT_PROFILE = true** — Request a short hotspot / memory sample during sanity runs when the stack exposes a clean profiler. Fall back to coarse timing and memory evidence otherwise.
 - **LONG_RUN_RESUME = `required`** — Any experiment that is multi-step or likely to run for 10+ minutes must be resumable. Missing resumeability is a deployment blocker.
 - **LONG_RUN_THRESHOLD = `10min_or_multi_step`** — Classify a run as "long" if it is clearly iterative (training / finetuning / search / long batched generation or evaluation) or likely to exceed roughly 10 minutes.
+- **SYNC_LOCAL_REMOTE = `origin`**
+- **SYNC_REMOTE = `upstream`**
+- **SYNC_BRANCH = `main`**
+- **SYNC_TARGET_BRANCH = `main`**
+- **SYNC_ON_ENTRY = true**
+- **SYNC_PUSH = true**
+- **SYNC_BRANCH_MODE = `main_only`**
 - **REPO_LOCAL_MEMORY = true** — Read repo-local experiment memory before redesigning runs or repeating failed runtime fixes.
 - **REPO_LOCAL_VENDOR_SKILLS = true** — Repo-local vendor skills live under `vendor-skills/` and can be reused locally without publishing them globally.
 - **AUTO_DEPLOY = true** — Automatically deploy experiments after implementation + review. Set `false` to manually inspect code before deploying.
@@ -67,6 +74,14 @@ This skill expects one or more of:
 6. **`vendor-skills/INSTALLED_SKILLS.json`** (optional) — repo-local third-party skills staged for this repo
 
 If none exist, ask the user what experiments to implement.
+
+Before Phase 1, try:
+
+```bash
+python3 tools/aris_upstream_sync.py sync
+```
+
+Continue on success, "no updates", or a temporary fetch / network failure. If the sync reports tracked worktree changes, local `main` vs `origin/main` divergence, a migration blocker, or an unresolved sync conflict, stop and fix the repo state before implementing experiments. The sync flow is origin-first and should leave the repo on `main`.
 
 ## State Persistence (Compact Recovery)
 
@@ -431,6 +446,7 @@ Ready for Workflow 2:
 - **CRITICAL — Long runs must be resumable.** Any multi-step or 10+ minute run must checkpoint periodically and auto-resume from the latest valid checkpoint.
 - **Follow the plan.** Do not invent experiments not in `EXPERIMENT_PLAN.md`.
 - **Sanity first.** Never deploy a full suite without verifying the sanity stage passes and `EXPERIMENT_RUNTIME.json` is usable.
+- **Keep the fork on `main`.** Migrate old `update`-branch layouts with `tools/aris_upstream_sync.py migrate-to-main`, then keep future origin-first sync on `main`.
 - **Reuse existing code.** Extend, do not duplicate.
 - **Save everything as JSON / CSV.** The downstream loops need parseable results, not just terminal output.
 - **Prefer stable run roots.** New experiment code should default to `results/<run_name>/`, with `checkpoints/` and `RUN_STATE.json` underneath unless the project already has a stronger native convention.

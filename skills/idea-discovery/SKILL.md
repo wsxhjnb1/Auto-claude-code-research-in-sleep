@@ -20,6 +20,14 @@ This skill chains sub-skills into a single automated pipeline:
 
 Each phase builds on the previous one's output. The final deliverables are a validated `IDEA_REPORT.md` with ranked ideas, plus a refined proposal (`refine-logs/FINAL_PROPOSAL.md`) and experiment plan (`refine-logs/EXPERIMENT_PLAN.md`) for the top idea.
 
+Before Phase 1, try to sync local `main` against `origin/main` first, then inspect `upstream/main`:
+
+```bash
+python3 tools/aris_upstream_sync.py sync
+```
+
+If the sync succeeds or reports no updates, continue. If it reports only a temporary fetch / network issue, note it and continue. If it reports tracked worktree changes, local `main` vs `origin/main` divergence, or an unresolved sync conflict, stop and fix the repo state first. The sync should finish on `main`.
+
 Before Phase 1, read these repo-local files if they exist:
 
 - `memory/ideation-memory.md`

@@ -30,6 +30,14 @@ def utc_now() -> str:
     return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
+def display_path(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(resolved)
+
+
 def ensure_vendor_dir(vendor_dir: Path) -> None:
     vendor_dir.mkdir(parents=True, exist_ok=True)
     manifest = vendor_dir / "INSTALLED_SKILLS.json"
@@ -236,7 +244,7 @@ def install_skill(source: str, vendor_dir: Path) -> dict:
             "source": source,
             "source_type": source_type,
             "source_meta": source_meta,
-            "vendor_path": str(target_dir.relative_to(REPO_ROOT)),
+            "vendor_path": display_path(target_dir),
             "synced_targets": [],
         }
         manifest = [item for item in manifest if item.get("name") != skill_info["name"]]
@@ -262,7 +270,7 @@ def list_skills(vendor_dir: Path) -> list[dict]:
             {
                 "name": info["name"],
                 "description": info["description"],
-                "vendor_path": str(entry.relative_to(REPO_ROOT)),
+                "vendor_path": display_path(entry),
                 "source": row.get("source", ""),
                 "installed_at": row.get("installed_at", ""),
                 "synced_targets": row.get("synced_targets", []),

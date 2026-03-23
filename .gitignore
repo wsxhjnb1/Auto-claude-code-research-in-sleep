@@ -20,3 +20,8 @@ __pycache__/
 # Repo-local vendor skills
 vendor-skills/*
 !vendor-skills/INSTALLED_SKILLS.json
+
+# Upstream sync runtime artifacts
+refine-logs/UPSTREAM_SYNC_STATE.json
+refine-logs/UPSTREAM_SYNC_LOG.md
+refine-logs/UPSTREAM_SYNC_CONFLICT_REPORT.md

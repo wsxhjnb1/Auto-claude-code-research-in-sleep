@@ -21,6 +21,16 @@ Autonomously iterate: review → implement fixes → re-review, until the extern
 
 > 💡 Override: `/auto-review-loop "topic" — human checkpoint: true`
 
+## Main-Branch Sync
+
+Before Initialization, try:
+
+```bash
+python3 tools/aris_upstream_sync.py sync
+```
+
+Continue on success, "no updates", or a temporary fetch / network failure. If the sync reports tracked worktree changes, local `main` vs `origin/main` divergence, or an unresolved sync conflict, stop and fix the repo state first. The sync flow is origin-first and should leave the repo on `main`.
+
 ## State Persistence (Compact Recovery)
 
 Long-running loops may hit the context window limit, triggering automatic compaction. To survive this, persist state to `REVIEW_STATE.json` after each round:
