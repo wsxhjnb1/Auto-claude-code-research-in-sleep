@@ -32,7 +32,7 @@ Custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code) skills for 
 - **2026-03-23** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧠 **Repo-local memory + vendor skills** — ARIS now ships `memory/` for workspace-local ideation/experiment memory and `tools/aris_skill_manager.py` for staging third-party skills inside `vendor-skills/`
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ♻️ **Long-run auto-resume contract** — Workflow 1.5 now treats missing checkpoint / auto-resume support as a correctness blocker for any multi-step or ~10+ minute run. `EXPERIMENT_RUNTIME.json` records output/checkpoint/resume metadata so the next AI session can continue from the latest valid checkpoint
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ⚔️ **Experiment debate loop** — `/experiment-bridge` now defaults to a bounded dual-AI debate loop (`code review mode: debate`) with runtime-review re-entry, structured `EXPERIMENT_DEBATE_LOG.md`, and parseable `EXPERIMENT_RUNTIME.json`
-- **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📋 **[Templates](templates/)** — input templates for every workflow. 📄 **7 venue templates** — CVPR, ACL, AAAI, ACM MM added. 🛡️ **Anti-hallucination fix** — Workflow 2 enforces DBLP → CrossRef → [VERIFY]. 🔗 **`base repo`** — clone a GitHub repo as base codebase (`— base repo: https://github.com/org/project`)
+- **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📋 **[Templates](templates/)** — input templates for every workflow. 📄 **7 venue templates** — CVPR, ACL, AAAI, ACM MM added. 🛡️ **Anti-hallucination fix** — Workflow 2 enforces DBLP → CrossRef → [VERIFY]. 🔗 **`base repo`** — hydrate the active research workspace directly from a GitHub repo (`— base repo: https://github.com/org/project`)
 - **2026-03-21** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🏆 **AAAI 2026 accepted — 7/10 with pure Codex CLI!** Built with ARIS-Codex skills by [@xinbo820-web](https://github.com/xinbo820-web). See [Community Showcase](#-community-showcase--papers-built-with-aris)
 - **2026-03-20** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🏆 **First community paper scored 8/10!** CS paper built entirely with ARIS. Congrats to [@DefanXue](https://github.com/DefanXue) & [@Monglitay](https://github.com/Monglitay)! See [Community Showcase](#-community-showcase--papers-built-with-aris)
 - **2026-03-20** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🚀 **[Antigravity adaptation guide](docs/ANTIGRAVITY_ADAPTATION.md)** — use ARIS skills in [Google Antigravity](https://antigravity.google/) (agent-first IDE). Native `SKILL.md` support, dual model, MCP config, EN + [CN](docs/ANTIGRAVITY_ADAPTATION_CN.md). Community contribution by [@PeppaPigw](https://github.com/PeppaPigw)
@@ -79,7 +79,10 @@ claude mcp add codex -s user -- codex mcp-server
 # 3. Use from the ARIS repo root
 # This repo already ships project-level Claude skills in `.claude/skills/`,
 # so starting Claude from this repo root exposes the main ARIS workflow slash commands directly.
-# The first main-entry call creates and activates `research/<slug>/`; later stages reuse that active workspace by default.
+# The first main-entry call creates and activates a plain `research/<slug>/`; later stages reuse that active workspace by default.
+# You can later turn that workspace into its own Git repo with `python3 tools/aris_research_workspace.py git-init`,
+# or hydrate it directly from an existing GitHub repo with `python3 tools/aris_research_workspace.py clone-repo --repo-url ...`.
+# Git-backed research workspaces are versioned by their own Git history; the outer ARIS repo ignores `research/**`.
 claude
 > /idea-discovery "your research direction"  # Workflow 1 — be specific! not "NLP" but "factorized gap in discrete diffusion LMs"
 > /experiment-bridge                         # Workflow 1.5 — have a plan? implement + deploy + collect results
@@ -109,7 +112,7 @@ claude
 > | `illustration` | `ai` | AI illustration in Workflow 3: `ai` (default, PaperBanana-derived runtime with browser-first Gemini web rendering), `mermaid` (free), or `false` (skip) |
 > | `illustration backend` | `browser` | Backend for `illustration: ai`: `browser` (default, dedicated Gemini web profile) or `api` (explicit fallback) |
 > | `venue` | `ICLR` | Target venue: `ICLR`, `NeurIPS`, `ICML`, `CVPR`, `ACL`, `AAAI`, `ACM`. Determines LaTeX style file and page limit |
-> | `base repo` | `false` | GitHub repo URL to clone as base codebase (e.g., `— base repo: https://github.com/org/project`). No code? Build on top of an open-source project |
+> | `base repo` | `false` | GitHub repo URL to hydrate the active research workspace itself as the codebase (e.g., `— base repo: https://github.com/org/project`). No code? Build on top of an open-source project |
 >
 > ```
 > /research-pipeline "your topic" — AUTO_PROCEED: false                          # pause at idea selection gate
@@ -1137,7 +1140,7 @@ Skills are plain Markdown files. Fork and customize:
 | `LIGHT_PROFILE` | true | Request a short hotspot / memory sample during sanity when supported | → `experiment-bridge` → `run-experiment` |
 | `LONG_RUN_RESUME` | `required` | Treat missing checkpoint / auto-resume support as a correctness blocker for any multi-step or ~10+ minute run | → `experiment-bridge` → `run-experiment` |
 | `LONG_RUN_THRESHOLD` | `10min_or_multi_step` | Classify long runs by expected runtime or iterative structure; long runs must emit resume metadata | → `experiment-bridge` → `run-experiment` |
-| `BASE_REPO` | false | GitHub repo URL to clone as base codebase for experiments | → `experiment-bridge` |
+| `BASE_REPO` | false | GitHub repo URL to hydrate the active research workspace itself as a git-backed codebase | → `experiment-bridge` |
 | `ILLUSTRATION` | `ai` | AI illustration: `ai` (default, PaperBanana-derived runtime with browser-first Gemini web rendering), `mermaid` (free), or `false` (skip) | → `paper-writing` |
 | `ILLUSTRATION_BACKEND` | `browser` | Illustration backend: `browser` (default, dedicated Gemini web profile) or `api` (explicit fallback requiring API credentials) | → `paper-writing` → `paper-illustration` |
 | `PAPER_AUTO_INSTALL` | true | Auto-bootstrap Workflow 3 dependencies on first run | → `paper-writing` |
@@ -1185,7 +1188,7 @@ Override inline: `/idea-discovery "topic" — pilot budget: 4h per idea, sources
 | `SANITY_FIRST` | true | Run smallest experiment first to catch setup bugs before full deployment |
 | `MAX_PARALLEL_RUNS` | 4 | Maximum experiments to deploy in parallel (limited by available GPUs) |
 | `WANDB` | false | Auto-add W&B logging. Requires `wandb_project` in CLAUDE.md |
-| `BASE_REPO` | false | GitHub repo URL to clone as base codebase for experiments |
+| `BASE_REPO` | false | GitHub repo URL to hydrate the active research workspace itself as a git-backed codebase |
 
 Override inline: `/experiment-bridge — code review mode: single, workload profile: inference, base repo: https://github.com/org/project`
 

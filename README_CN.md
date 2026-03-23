@@ -32,7 +32,7 @@
 - **2026-03-23** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🧠 **Repo 本地 memory + vendor skills** — ARIS 现在内置 `memory/`（工作区本地的 idea / experiment 记忆）和 `tools/aris_skill_manager.py`（把第三方 skill 先安装到 `vendor-skills/`，不直接污染全局 skill 目录）
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ♻️ **长任务自动续跑契约** — Workflow 1.5 现在把“缺 checkpoint / auto-resume 支持”视为任意多步或约 10 分钟以上长任务的正确性 blocker。`EXPERIMENT_RUNTIME.json` 会记录输出目录、checkpoint 和 resume 元数据，方便下一个 AI 会话从最新有效 checkpoint 继续
 - **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) ⚔️ **实验辩论循环** — `/experiment-bridge` 默认升级为有界双 AI 辩论循环（`code review mode: debate`），支持运行时复审回流，并产出结构化 `EXPERIMENT_DEBATE_LOG.md` 与可解析的 `EXPERIMENT_RUNTIME.json`
-- **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📋 **[模板](templates/)** — 每个工作流的输入模板。📄 **7 个会议模板** — 新增 CVPR、ACL、AAAI、ACM MM（现支持 ICLR/NeurIPS/ICML/CVPR/ACL/AAAI/ACM）。🛡️ **反幻觉修复** — 工作流 2 强制 DBLP → CrossRef → [VERIFY]。🔗 **`base repo`** — 克隆 GitHub 项目作为实验基础（`— base repo: https://github.com/org/project`）
+- **2026-03-22** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 📋 **[模板](templates/)** — 每个工作流的输入模板。📄 **7 个会议模板** — 新增 CVPR、ACL、AAAI、ACM MM（现支持 ICLR/NeurIPS/ICML/CVPR/ACL/AAAI/ACM）。🛡️ **反幻觉修复** — 工作流 2 强制 DBLP → CrossRef → [VERIFY]。🔗 **`base repo`** — 直接把当前 active research workspace hydrate 成 GitHub 项目（`— base repo: https://github.com/org/project`）
 - **2026-03-21** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🏆 **AAAI 2026 接收——纯 Codex CLI 7/10 分！** ARIS-Codex skills 完成，by [@xinbo820-web](https://github.com/xinbo820-web)。详见[社区实操](#-社区实操--用-aris-完成的论文)
 - **2026-03-20** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🏆 **首个社区论文获 8/10 分！** CS 论文全程 ARIS 完成——"empirical findings are stark, well-supported"。恭喜 [@DefanXue](https://github.com/DefanXue) & [@Monglitay](https://github.com/Monglitay)！详见[社区实操](#-社区实操--用-aris-完成的论文)
 - **2026-03-20** — ![NEW](https://img.shields.io/badge/NEW-red?style=flat-square) 🚀 **[Antigravity 适配指南](docs/ANTIGRAVITY_ADAPTATION_CN.md)** — 在 [Google Antigravity](https://antigravity.google/)（Agent-First IDE）中使用 ARIS skills。原生 `SKILL.md` 支持，双模型（Claude Opus 4.6 Thinking / Gemini 3.1 Pro），MCP 配置，[英文](docs/ANTIGRAVITY_ADAPTATION.md) + 中文指南
@@ -78,7 +78,10 @@ claude mcp add codex -s user -- codex mcp-server
 # 3. 在 ARIS repo 根目录内使用
 # 当前仓库已内置 `.claude/skills/` 项目级 Claude skills，
 # 所以从 repo 根目录启动 Claude 后会直接出现主要工作流的 slash 命令。
-# 第一次主入口调用会创建并激活 `research/<slug>/`；后续阶段默认复用这个 active research。
+# 第一次主入口调用会创建并激活一个 plain `research/<slug>/`；后续阶段默认复用这个 active research。
+# 之后可按需用 `python3 tools/aris_research_workspace.py git-init` 把它接管成独立 Git 仓库，
+# 或用 `python3 tools/aris_research_workspace.py clone-repo --repo-url ...` 直接把现有 GitHub 仓库导入为 workspace 根。
+# 一旦某个 research workspace 变成 git-backed，它的版本历史就由该目录自己的 Git 管理；外层 ARIS 仓库会忽略 `research/**`。
 claude
 > /idea-discovery "你的研究方向"              # 工作流 1 — 方向要具体！不要 "NLP"，要 "离散扩散语言模型的 factorized gap"
 > /experiment-bridge                         # 工作流 1.5 — 有计划了？实现 + 部署 + 收结果
@@ -108,7 +111,7 @@ claude
 > | `illustration` | `ai` | 工作流 3 AI 作图：`ai`（默认，PaperBanana 风格运行时，浏览器优先的 Gemini 网页端渲染）、`mermaid`（免费）、`false`（跳过） |
 > | `illustration backend` | `browser` | `illustration: ai` 的后端：`browser`（默认，独立 Gemini 网页 profile）或 `api`（显式备用） |
 > | `venue` | `ICLR` | 目标会议：`ICLR`、`NeurIPS`、`ICML`、`CVPR`、`ACL`、`AAAI`、`ACM`。决定 LaTeX 样式和页数限制 |
-> | `base repo` | `false` | GitHub 仓库 URL，克隆作为实验基础代码（如 `— base repo: https://github.com/org/project`）。没有代码？基于开源项目开发 |
+> | `base repo` | `false` | GitHub 仓库 URL，把当前 active research workspace 直接 hydrate 成代码仓库（如 `— base repo: https://github.com/org/project`）。没有代码？基于开源项目开发 |
 >
 > ```
 > /research-pipeline "你的课题" — AUTO_PROCEED: false                          # 在 idea 选择关卡暂停
@@ -1041,7 +1044,7 @@ Skills 就是普通的 Markdown 文件，fork 后随意改：
 | `LIGHT_PROFILE` | true | sanity 阶段在支持时请求短时热点 / 显存采样 | → `experiment-bridge` → `run-experiment` |
 | `LONG_RUN_RESUME` | `required` | 对任意多步或约 10 分钟以上长任务，把“缺 checkpoint / auto-resume”视为正确性 blocker | → `experiment-bridge` → `run-experiment` |
 | `LONG_RUN_THRESHOLD` | `10min_or_multi_step` | 按预计时长或迭代结构判断长任务；长任务必须写出 resume 元数据 | → `experiment-bridge` → `run-experiment` |
-| `BASE_REPO` | false | GitHub 仓库 URL，克隆作为实验基础代码 | → `experiment-bridge` |
+| `BASE_REPO` | false | GitHub 仓库 URL，把当前 active research workspace 直接 hydrate 成 git-backed 代码仓库 | → `experiment-bridge` |
 | `ILLUSTRATION` | `ai` | AI 作图：`ai`（默认，PaperBanana 风格运行时，浏览器优先的 Gemini 网页端渲染）、`mermaid`（免费）、`false`（跳过） | → `paper-writing` |
 | `ILLUSTRATION_BACKEND` | `browser` | `illustration: ai` 的后端选择：`browser`（默认，独立 Gemini 网页 profile）或 `api`（显式备用，需要 API 凭据） | → `paper-writing` → `paper-illustration` |
 | `PAPER_AUTO_INSTALL` | true | 首次运行时自动 bootstrap Workflow 3 依赖 | → `paper-writing` |
@@ -1089,7 +1092,7 @@ Skills 就是普通的 Markdown 文件，fork 后随意改：
 | `SANITY_FIRST` | true | 先跑最小实验，提前发现 bug |
 | `MAX_PARALLEL_RUNS` | 4 | 最多并行部署几个实验（受可用 GPU 限制） |
 | `WANDB` | false | 自动加 W&B 日志。需在 CLAUDE.md 配 `wandb_project` |
-| `BASE_REPO` | false | GitHub 仓库 URL，克隆作为实验基础代码 |
+| `BASE_REPO` | false | GitHub 仓库 URL，把当前 active research workspace 直接 hydrate 成 git-backed 代码仓库 |
 
 行内覆盖：`/experiment-bridge — code review mode: single, workload profile: inference, base repo: https://github.com/org/project`
 

@@ -31,6 +31,7 @@ Behavior:
 - If an active research workspace already exists, `/experiment-bridge` reuses it.
 - To switch workspaces explicitly, include `research name: <human-readable-name>` inline.
 - If no active workspace exists, start from `/research-pipeline` or `/idea-discovery`, or pass an explicit `research name:` override.
+- Research workspaces start as plain directories. When needed, turn one into its own Git repo with `python3 tools/aris_research_workspace.py git-init --research-name "<name>"`, or import an existing GitHub repo directly into `research/<slug>/` with `clone-repo`.
 - Research artifacts live under `$RESEARCH_ROOT`; repo-level `memory/`, `vendor-skills/`, `.venv/`, `.claude/`, and runtime/sync state stay at the repo root.
 
 ## Overview
@@ -70,7 +71,7 @@ The debate loop is default-enabled in v1. It is framework-agnostic at the core, 
 - **AUTO_DEPLOY = true** — Automatically deploy experiments after implementation + review. Set `false` to manually inspect code before deploying.
 - **SANITY_FIRST = true** — Run the sanity-stage experiment first (smallest, fastest) before launching the rest. Catches setup bugs early.
 - **MAX_PARALLEL_RUNS = 4** — Maximum number of experiments to deploy in parallel (limited by available GPUs).
-- **BASE_REPO = false** — GitHub repo URL to use as base codebase. When set, clone the repo first and implement experiments on top of it. When `false` (default), write code from scratch or reuse existing project files.
+- **BASE_REPO = false** — GitHub repo URL to hydrate the active research workspace itself as a git-backed codebase. When `false` (default), write code from scratch or reuse the current workspace contents.
 
 > Override: `/experiment-bridge "EXPERIMENT_PLAN.md" — code review mode: single, workload profile: inference, light profile: false`
 
@@ -162,17 +163,18 @@ Experiment plan loaded:
 
 ### Phase 2: Implement Experiment Code
 
-**If `BASE_REPO` is set** — clone the repo first:
+**If `BASE_REPO` is set** — hydrate the active workspace itself as that repo:
 
 ```bash
-git clone <BASE_REPO> base_repo/
-# Read the repo's README, understand its structure, find entry points
-# Implement experiments by modifying/extending this codebase
+python3 tools/aris_research_workspace.py clone-repo --repo-url <BASE_REPO> --research-name "<active research>"
+# The cloned repository now lives at $RESEARCH_ROOT itself.
+# Read its README, understand its structure, find entry points,
+# then implement experiments directly in that workspace root.
 ```
 
 For each milestone (in order), write the experiment scripts:
 
-1. **Check existing code** — scan the project (or cloned `base_repo/`) for existing experiment scripts, model code, data loaders. Reuse as much as possible.
+1. **Check existing code** — scan the active workspace root for existing experiment scripts, model code, data loaders. Reuse as much as possible.
    - Also inspect any relevant repo-local vendor skill staged under `vendor-skills/`. Reuse it locally if it fits and keep it alongside the rest of this repo-local workflow.
 2. **Implement missing pieces:**
    - training scripts with proper argparse (all hyperparameters configurable)

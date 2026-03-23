@@ -28,9 +28,12 @@ echo "Using research workspace: $RESEARCH_ROOT"
 
 Behavior:
 
-- The first main-entry call creates `research/<slug>/` and marks it active in `research/ACTIVE_RESEARCH.json`.
+- The first main-entry call creates a plain `research/<slug>/` and marks it active in `research/ACTIVE_RESEARCH.json`.
 - Reusing the same research name reuses the same workspace, which keeps experiment resume state and paper artifacts together.
 - Later stages default to the active research workspace. To switch, include `research name: <human-readable-name>` inline.
+- Run `python3 tools/aris_research_workspace.py git-init --research-name "<name>"` when you want that workspace to become its own Git repo.
+- Run `python3 tools/aris_research_workspace.py clone-repo --repo-url <github-url> [--research-name "<name>"]` when an existing repo should become the workspace root directly.
+- Git-backed research workspaces keep their own Git history; the outer ARIS repo ignores `research/**`.
 - Repo-level runtime stays at the repo root: `.venv/`, `.claude/`, `memory/`, `vendor-skills/`, and runtime/sync state under `refine-logs/`.
 
 ## Constants

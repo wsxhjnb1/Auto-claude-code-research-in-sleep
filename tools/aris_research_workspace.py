@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -37,6 +38,21 @@ INLINE_OVERRIDE_RE = re.compile(
 WORKSPACE_PATH_RE = re.compile(
     r"(?P<path>(?:\./)?research/(?P<slug>[A-Za-z0-9][A-Za-z0-9._-]*)(?:/[^\s\"']*)?)"
 )
+WORKSPACE_MODE_PLAIN = "plain"
+WORKSPACE_MODE_GIT = "git"
+SOURCE_KIND_NEW = "new"
+SOURCE_KIND_GIT_INIT = "git_init"
+SOURCE_KIND_GIT_CLONE = "git_clone"
+GIT_INIT_COMMIT_MESSAGE = "chore: initialize ARIS research workspace"
+WORKSPACE_GITIGNORE = """# Local development noise
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+.venv/
+.pytest_cache/
+.mypy_cache/
+"""
 
 
 class WorkspaceError(RuntimeError):
@@ -49,6 +65,10 @@ class ResearchWorkspace:
     slug: str
     path: Path
     repo_root: Path
+    workspace_mode: str = WORKSPACE_MODE_PLAIN
+    source_kind: str = SOURCE_KIND_NEW
+    git_origin_url: str | None = None
+    git_default_branch: str | None = None
 
     @property
     def relative_path(self) -> str:
@@ -59,11 +79,18 @@ class ResearchWorkspace:
         return self.path / WORKSPACE_META_NAME
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "name": self.name,
             "slug": self.slug,
             "path": self.relative_path,
+            "workspace_mode": self.workspace_mode,
+            "source_kind": self.source_kind,
         }
+        if self.git_origin_url:
+            payload["git_origin_url"] = self.git_origin_url
+        if self.git_default_branch:
+            payload["git_default_branch"] = self.git_default_branch
+        return payload
 
 
 def utc_now() -> str:
@@ -79,10 +106,27 @@ def slugify_research_name(name: str) -> str:
 
 def _workspace_from_slug(repo_root: Path, slug: str, *, name: str | None = None) -> ResearchWorkspace:
     path = repo_root / "research" / slug
+    metadata = _read_json(path / WORKSPACE_META_NAME)
     if name is None:
-        metadata = _read_json(path / WORKSPACE_META_NAME)
         name = str(metadata.get("name") or slug)
-    return ResearchWorkspace(name=name, slug=slug, path=path, repo_root=repo_root)
+    workspace_mode = _detect_workspace_mode(path, metadata)
+    return ResearchWorkspace(
+        name=name,
+        slug=slug,
+        path=path,
+        repo_root=repo_root,
+        workspace_mode=workspace_mode,
+        source_kind=str(
+            metadata.get("source_kind")
+            or (
+                SOURCE_KIND_GIT_CLONE
+                if workspace_mode == WORKSPACE_MODE_GIT
+                else SOURCE_KIND_NEW
+            )
+        ),
+        git_origin_url=str(metadata.get("git_origin_url") or "") or None,
+        git_default_branch=str(metadata.get("git_default_branch") or "") or None,
+    )
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -97,6 +141,157 @@ def _read_json(path: Path) -> dict[str, Any]:
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _detect_workspace_mode(path: Path, metadata: dict[str, Any] | None = None) -> str:
+    metadata = metadata or {}
+    if _is_git_workspace(path):
+        return WORKSPACE_MODE_GIT
+    return str(metadata.get("workspace_mode") or WORKSPACE_MODE_PLAIN)
+
+
+def _is_git_workspace(path: Path) -> bool:
+    return (path / ".git").exists()
+
+
+def _run_git(args: list[str], *, cwd: Path) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        stderr = result.stderr.strip() or result.stdout.strip() or "git command failed"
+        raise WorkspaceError(f"`git {' '.join(args)}` failed in {cwd}: {stderr}")
+    return result.stdout.strip()
+
+
+def _maybe_run_git(args: list[str], *, cwd: Path) -> str | None:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=str(cwd),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    output = result.stdout.strip()
+    return output or None
+
+
+def _git_info(path: Path) -> dict[str, str | None]:
+    if not _is_git_workspace(path):
+        return {"origin_url": None, "default_branch": None}
+    origin_url = _maybe_run_git(["remote", "get-url", "origin"], cwd=path)
+    default_branch = _maybe_run_git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], cwd=path)
+    if default_branch and "/" in default_branch:
+        default_branch = default_branch.split("/", 1)[1]
+    if not default_branch:
+        head_branch = _maybe_run_git(["rev-parse", "--abbrev-ref", "HEAD"], cwd=path)
+        if head_branch and head_branch != "HEAD":
+            default_branch = head_branch
+    return {
+        "origin_url": origin_url,
+        "default_branch": default_branch,
+    }
+
+
+def _workspace_name_from_repo_url(repo_url: str) -> str:
+    cleaned = repo_url.rstrip("/").rsplit("/", 1)[-1]
+    if cleaned.endswith(".git"):
+        cleaned = cleaned[:-4]
+    return cleaned or "research"
+
+
+def _is_empty_scaffold(path: Path) -> bool:
+    if not path.exists():
+        return True
+    allowed = {WORKSPACE_META_NAME}
+    for child in path.iterdir():
+        if child.name in allowed and child.is_file():
+            continue
+        if child.name == "refine-logs" and child.is_dir() and not any(child.iterdir()):
+            continue
+        return False
+    return True
+
+
+def _remove_empty_scaffold(path: Path) -> None:
+    if not path.exists():
+        return
+    if not _is_empty_scaffold(path):
+        raise WorkspaceError(
+            f"Cannot reuse {path}: the research workspace already has substantive contents."
+        )
+    if (path / WORKSPACE_META_NAME).exists():
+        (path / WORKSPACE_META_NAME).unlink()
+    refine_logs = path / "refine-logs"
+    if refine_logs.exists() and refine_logs.is_dir():
+        refine_logs.rmdir()
+    if path.exists():
+        path.rmdir()
+
+
+def _workspace_readme(workspace: ResearchWorkspace) -> str:
+    return (
+        f"# {workspace.name}\n\n"
+        "This research workspace is managed by ARIS.\n\n"
+        f"- Slug: `{workspace.slug}`\n"
+        "- Layout: code, reports, paper, figures, results, and refine-logs live in this directory.\n"
+    )
+
+
+def _refresh_workspace_metadata(
+    workspace: ResearchWorkspace,
+    *,
+    source_kind: str | None = None,
+) -> ResearchWorkspace:
+    workspace.path.mkdir(parents=True, exist_ok=True)
+    (workspace.path / "refine-logs").mkdir(parents=True, exist_ok=True)
+
+    existing = _read_json(workspace.metadata_path)
+    workspace_mode = _detect_workspace_mode(workspace.path, existing)
+    git_info = _git_info(workspace.path) if workspace_mode == WORKSPACE_MODE_GIT else {}
+    created_at = str(existing.get("created_at") or utc_now())
+    resolved_source_kind = (
+        source_kind
+        or str(existing.get("source_kind") or "").strip()
+        or (
+            SOURCE_KIND_GIT_CLONE
+            if workspace_mode == WORKSPACE_MODE_GIT and git_info.get("origin_url")
+            else SOURCE_KIND_GIT_INIT
+            if workspace_mode == WORKSPACE_MODE_GIT
+            else SOURCE_KIND_NEW
+        )
+    )
+
+    payload = {
+        "name": workspace.name,
+        "slug": workspace.slug,
+        "path": workspace.relative_path,
+        "workspace_mode": workspace_mode,
+        "source_kind": resolved_source_kind,
+        "created_at": created_at,
+        "updated_at": utc_now(),
+    }
+    if workspace_mode == WORKSPACE_MODE_GIT:
+        payload["git_origin_url"] = git_info.get("origin_url")
+        payload["git_default_branch"] = git_info.get("default_branch")
+
+    _write_json(workspace.metadata_path, payload)
+    return ResearchWorkspace(
+        name=workspace.name,
+        slug=workspace.slug,
+        path=workspace.path,
+        repo_root=workspace.repo_root,
+        workspace_mode=workspace_mode,
+        source_kind=resolved_source_kind,
+        git_origin_url=str(payload.get("git_origin_url") or "") or None,
+        git_default_branch=str(payload.get("git_default_branch") or "") or None,
+    )
 
 
 def extract_research_name_override(arguments: str) -> str | None:
@@ -142,19 +337,7 @@ def ensure_workspace(
         raise WorkspaceError("Research name is empty.")
     slug = slugify_research_name(research_name)
     workspace = _workspace_from_slug(repo_root, slug, name=research_name)
-    workspace.path.mkdir(parents=True, exist_ok=True)
-    (workspace.path / "refine-logs").mkdir(parents=True, exist_ok=True)
-
-    metadata = _read_json(workspace.metadata_path)
-    created_at = metadata.get("created_at") or utc_now()
-    payload = {
-        "name": research_name,
-        "slug": slug,
-        "path": workspace.relative_path,
-        "created_at": created_at,
-        "updated_at": utc_now(),
-    }
-    _write_json(workspace.metadata_path, payload)
+    workspace = _refresh_workspace_metadata(workspace)
     set_active_workspace(workspace)
     return workspace
 
@@ -173,6 +356,8 @@ def get_active_workspace(*, repo_root: Path = DEFAULT_REPO_ROOT) -> ResearchWork
     workspace = _workspace_from_slug(repo_root, slug, name=str(data.get("name") or slug))
     if not workspace.path.exists():
         return None
+    workspace = _refresh_workspace_metadata(workspace)
+    set_active_workspace(workspace)
     return workspace
 
 
@@ -206,6 +391,7 @@ def resolve_workspace_for_stage(
 ) -> ResearchWorkspace:
     explicit_workspace = extract_workspace_reference(arguments, repo_root=repo_root)
     if explicit_workspace is not None:
+        explicit_workspace = _refresh_workspace_metadata(explicit_workspace)
         set_active_workspace(explicit_workspace)
         return explicit_workspace
 
@@ -231,6 +417,86 @@ def resolve_workspace_for_stage(
         "No active research workspace. Start with `/research-pipeline` or `/idea-discovery`, "
         "or provide `research name:` explicitly."
     )
+
+
+def git_init_workspace(
+    *,
+    repo_root: Path = DEFAULT_REPO_ROOT,
+    research_name: str | None = None,
+) -> ResearchWorkspace:
+    workspace = (
+        ensure_workspace(repo_root=repo_root, research_name=research_name)
+        if research_name
+        else get_active_workspace(repo_root=repo_root)
+    )
+    if workspace is None:
+        raise WorkspaceError("No active research workspace to initialize.")
+
+    if _is_git_workspace(workspace.path):
+        workspace = _refresh_workspace_metadata(workspace)
+        set_active_workspace(workspace)
+        return workspace
+
+    _run_git(["init", "-b", "main"], cwd=workspace.path)
+
+    gitignore_path = workspace.path / ".gitignore"
+    if not gitignore_path.exists():
+        gitignore_path.write_text(WORKSPACE_GITIGNORE, encoding="utf-8")
+
+    readme_path = workspace.path / "README.md"
+    if not readme_path.exists():
+        readme_path.write_text(_workspace_readme(workspace), encoding="utf-8")
+
+    workspace = _refresh_workspace_metadata(workspace, source_kind=SOURCE_KIND_GIT_INIT)
+    set_active_workspace(workspace)
+
+    _run_git(["add", "."], cwd=workspace.path)
+    result = subprocess.run(
+        ["git", "commit", "-m", GIT_INIT_COMMIT_MESSAGE],
+        cwd=str(workspace.path),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        stderr = result.stderr.strip() or result.stdout.strip()
+        raise WorkspaceError(
+            f"Failed to create the initial workspace commit in {workspace.path}: {stderr}"
+        )
+    return workspace
+
+
+def clone_repo_into_workspace(
+    *,
+    repo_url: str,
+    research_name: str | None = None,
+    ref: str | None = None,
+    repo_root: Path = DEFAULT_REPO_ROOT,
+) -> ResearchWorkspace:
+    if not repo_url.strip():
+        raise WorkspaceError("Repository URL is empty.")
+
+    resolved_name = (research_name or "").strip() or _workspace_name_from_repo_url(repo_url)
+    slug = slugify_research_name(resolved_name)
+    destination = repo_root / "research" / slug
+
+    if destination.exists():
+        _remove_empty_scaffold(destination)
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    clone_cmd = ["git", "clone"]
+    if ref:
+        clone_cmd.extend(["--branch", ref])
+    clone_cmd.extend([repo_url, str(destination)])
+    result = subprocess.run(clone_cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        stderr = result.stderr.strip() or result.stdout.strip()
+        raise WorkspaceError(f"Failed to clone {repo_url} into {destination}: {stderr}")
+
+    workspace = _workspace_from_slug(repo_root, slug, name=resolved_name)
+    workspace = _refresh_workspace_metadata(workspace, source_kind=SOURCE_KIND_GIT_CLONE)
+    set_active_workspace(workspace)
+    return workspace
 
 
 def default_workspace_root(
@@ -299,6 +565,16 @@ def _build_parser() -> argparse.ArgumentParser:
 
     status_p = subparsers.add_parser("status", help="Show the current active research workspace.")
     status_p.add_argument("--print-path", action="store_true")
+
+    git_init_p = subparsers.add_parser("git-init", help="Initialize the active research workspace as a Git repo.")
+    git_init_p.add_argument("--research-name")
+    git_init_p.add_argument("--print-path", action="store_true")
+
+    clone_p = subparsers.add_parser("clone-repo", help="Clone an external repo directly into research/<slug>.")
+    clone_p.add_argument("--repo-url", required=True)
+    clone_p.add_argument("--research-name")
+    clone_p.add_argument("--ref")
+    clone_p.add_argument("--print-path", action="store_true")
     return parser
 
 
@@ -330,6 +606,18 @@ def main() -> int:
             workspace = get_active_workspace()
             if workspace is None:
                 raise WorkspaceError("No active research workspace.")
+            return _emit_workspace(workspace, print_path=args.print_path)
+
+        if args.command == "git-init":
+            workspace = git_init_workspace(research_name=args.research_name)
+            return _emit_workspace(workspace, print_path=args.print_path)
+
+        if args.command == "clone-repo":
+            workspace = clone_repo_into_workspace(
+                repo_url=args.repo_url,
+                research_name=args.research_name,
+                ref=args.ref,
+            )
             return _emit_workspace(workspace, print_path=args.print_path)
 
     except WorkspaceError as exc:

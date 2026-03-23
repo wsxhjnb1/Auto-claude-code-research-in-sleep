@@ -20,7 +20,7 @@ RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage researc
 echo "Using research workspace: $RESEARCH_ROOT"
 ```
 
-The first main-entry call creates `research/<slug>/` and records it in `research/ACTIVE_RESEARCH.json`. Later stages reuse the active research workspace by default. To switch, include `research name: <human-readable-name>` inline.
+The first main-entry call creates a plain `research/<slug>/` and records it in `research/ACTIVE_RESEARCH.json`. Later stages reuse the active research workspace by default. To switch, include `research name: <human-readable-name>` inline. Use `python3 tools/aris_research_workspace.py git-init --research-name "<name>"` when that workspace should become its own Git repo, or `clone-repo --repo-url <github-url>` when an existing repo should become the workspace root directly. Git-backed workspaces keep their own Git history; the outer ARIS repo ignores `research/**`.
 
 ## Constants
 
