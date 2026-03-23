@@ -8,9 +8,17 @@ import json
 import re
 from pathlib import Path
 
-from ensure_paper_runtime import maybe_reexec_for_phase
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
-maybe_reexec_for_phase("write")
+from ensure_paper_runtime import maybe_reexec_for_phase
+from aris_research_workspace import (
+    WorkspaceError,
+    default_workspace_root,
+    extract_workspace_reference,
+    resolve_artifact_path,
+)
+
+maybe_reexec_for_phase("write", work_dir=REPO_ROOT)
 
 
 def parse_args() -> argparse.Namespace:
@@ -21,16 +29,47 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--runtime", default="refine-logs/EXPERIMENT_RUNTIME.json")
     parser.add_argument("--review", default="AUTO_REVIEW.md")
     parser.add_argument("--output", default="NARRATIVE_REPORT.md")
+    parser.add_argument("--workspace-root")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    proposal = _read_optional(Path(args.proposal))
-    plan = _read_optional(Path(args.plan))
-    results = _read_optional(Path(args.results))
-    review = _read_optional(Path(args.review))
-    runtime = _read_json_optional(Path(args.runtime))
+    explicit_workspace = extract_workspace_reference(
+        " ".join(
+            [
+                args.proposal,
+                args.plan,
+                args.results,
+                args.runtime,
+                args.review,
+                args.output,
+            ]
+        ),
+        repo_root=REPO_ROOT,
+    )
+    try:
+        workspace_root = default_workspace_root(
+            explicit_workspace_root=args.workspace_root
+            or (explicit_workspace.relative_path if explicit_workspace is not None else None),
+            repo_root=REPO_ROOT,
+        )
+    except WorkspaceError as exc:
+        print(str(exc))
+        return 1
+
+    proposal_path = resolve_artifact_path(args.proposal, workspace_root=workspace_root, repo_root=REPO_ROOT)
+    plan_path = resolve_artifact_path(args.plan, workspace_root=workspace_root, repo_root=REPO_ROOT)
+    results_path = resolve_artifact_path(args.results, workspace_root=workspace_root, repo_root=REPO_ROOT)
+    runtime_path = resolve_artifact_path(args.runtime, workspace_root=workspace_root, repo_root=REPO_ROOT)
+    review_path = resolve_artifact_path(args.review, workspace_root=workspace_root, repo_root=REPO_ROOT)
+    output_path = resolve_artifact_path(args.output, workspace_root=workspace_root, repo_root=REPO_ROOT)
+
+    proposal = _read_optional(proposal_path)
+    plan = _read_optional(plan_path)
+    results = _read_optional(results_path)
+    review = _read_optional(review_path)
+    runtime = _read_json_optional(runtime_path)
 
     title = _extract_title(proposal) or _extract_title(results) or "Auto-Synthesized Research Narrative"
     method_description = _extract_section(review, "Method Description")
@@ -46,8 +85,8 @@ def main() -> int:
     experiment_setup = _extract_setup(plan, runtime)
     experiment_summary = _extract_experiment_summary(results, runtime)
 
-    output = Path(args.output)
-    output.write_text(
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
         "\n".join(
             [
                 f"# Narrative Report: {title}",

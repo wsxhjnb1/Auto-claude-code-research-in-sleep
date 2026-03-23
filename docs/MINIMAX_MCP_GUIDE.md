@@ -111,8 +111,11 @@ Auto-claude-code-research-in-sleep/
 ├── mcp-servers/
 │   └── minimax-chat/
 │       └── server.py                # MiniMax MCP 服务器，settings.json 直接引用 repo 绝对路径
-├── AUTO_REVIEW.md                   # 审查日志（自动生成）
-└── REVIEW_STATE.json                # 状态持久化（自动生成）
+├── research/
+│   └── <slug>/
+│       ├── AUTO_REVIEW.md           # 审查日志（自动生成）
+│       └── refine-logs/
+│           └── REVIEW_STATE.json    # 状态持久化（自动生成）
 ```
 
 ## MCP 服务器特性

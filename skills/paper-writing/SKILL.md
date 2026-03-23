@@ -17,15 +17,31 @@ Run this workflow from the root of a checked-out ARIS repo or fork. It depends o
 
 When Claude Code is started from the ARIS repo root, the project-level wrapper at `.claude/skills/paper-writing/SKILL.md` exposes `/paper-writing`. The canonical implementation remains this file.
 
+## Research Workspace
+
+Resolve the active research workspace before Workflow 3:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage paper-writing --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Behavior:
+
+- `/paper-writing` defaults to the current active research workspace.
+- To switch to another paper target, include `research name: <human-readable-name>` inline.
+- Narrative reports, paper plans, figures, papers, and Workflow 3 logs belong under `$RESEARCH_ROOT`.
+- Repo-level runtime remains at the repo root: `.venv/`, `.claude/`, `memory/`, `vendor-skills/`, and runtime/sync state under `refine-logs/`.
+
 ## Overview
 
-This workflow is now a true artifact-driven pipeline:
+This workflow is now a true artifact-driven pipeline rooted at `$RESEARCH_ROOT`:
 
 ```
 narrative synthesis → /paper-plan → /paper-figure → /paper-illustration → /paper-write → /paper-compile → /auto-paper-improvement-loop
 ```
 
-The key change is that `NARRATIVE_REPORT.md` is no longer treated as a purely manual prerequisite. If it does not exist, but Workflow 1.5 / 2 artifacts do exist, synthesize it first.
+The key change is that `$RESEARCH_ROOT/NARRATIVE_REPORT.md` is no longer treated as a purely manual prerequisite. If it does not exist, but Workflow 1.5 / 2 artifacts do exist, synthesize it first.
 
 ## Constants
 
@@ -55,6 +71,8 @@ This workflow can start from any of:
 2. **Workflow 2 artifacts** — `AUTO_REVIEW.md`, `refine-logs/EXPERIMENT_RESULTS.md`, `refine-logs/EXPERIMENT_PLAN.md`, `refine-logs/FINAL_PROPOSAL.md`
 3. **Existing `PAPER_PLAN.md`** — skip directly to figure generation and writing
 
+Treat those paths as relative to `$RESEARCH_ROOT` unless the user explicitly supplies an absolute path or a `research/...` path.
+
 ## Pipeline
 
 ### Phase -2: Main-Branch Sync
@@ -75,14 +93,15 @@ Before any Workflow 3 step, run:
 python3 tools/ensure_paper_runtime.py --phase workflow3
 ```
 
-This creates/reuses `.venv`, installs the Python packages for plotting and browser rendering, installs Chromium for Playwright, auto-installs supported system packages such as `latexmk` / `pdfinfo` / `pdftotext`, and writes `refine-logs/PAPER_RUNTIME_STATE.json`.
+This creates/reuses repo-level `.venv`, installs the Python packages for plotting and browser rendering, installs Chromium for Playwright, auto-installs supported system packages such as `latexmk` / `pdfinfo` / `pdftotext`, and writes repo-level `refine-logs/PAPER_RUNTIME_STATE.json`.
 
 ### Phase 0: Narrative Synthesis
 
-If `NARRATIVE_REPORT.md` is missing, synthesize a draft from the existing research artifacts:
+If `NARRATIVE_REPORT.md` is missing, synthesize a draft from the existing research artifacts in `$RESEARCH_ROOT`:
 
 ```bash
 python3 tools/synthesize_narrative_report.py \
+  --workspace-root "$RESEARCH_ROOT" \
   --proposal refine-logs/FINAL_PROPOSAL.md \
   --plan refine-logs/EXPERIMENT_PLAN.md \
   --results refine-logs/EXPERIMENT_RESULTS.md \
@@ -111,7 +130,7 @@ Invoke `/paper-plan`:
 
 Expected output:
 
-- `PAPER_PLAN.md`
+- `$RESEARCH_ROOT/PAPER_PLAN.md`
 
 The plan must include a detailed Figure Plan table and explicit hero-figure requirements.
 
@@ -131,8 +150,8 @@ This phase owns:
 
 Expected outputs:
 
-- `figures/latex_includes.tex`
-- plot/table assets under `figures/`
+- `$RESEARCH_ROOT/figures/latex_includes.tex`
+- plot/table assets under `$RESEARCH_ROOT/figures/`
 
 ### Phase 2b: AI Illustration Generation
 
@@ -145,6 +164,7 @@ If `ILLUSTRATION = ai`, run the PaperBanana-derived illustration runtime for:
 
 ```bash
 python3 tools/paper_illustration_cli.py \
+  --workspace-root "$RESEARCH_ROOT" \
   --paper-plan PAPER_PLAN.md \
   --narrative-report NARRATIVE_REPORT.md \
   --auto-review AUTO_REVIEW.md \
@@ -164,9 +184,9 @@ If `ILLUSTRATION = false`, skip AI illustration entirely.
 
 The AI illustration phase must produce:
 
-- `figures/ai_generated/*.png`
-- `figures/illustration_manifest.json`
-- updated `figures/latex_includes.tex`
+- `$RESEARCH_ROOT/figures/ai_generated/*.png`
+- `$RESEARCH_ROOT/figures/illustration_manifest.json`
+- updated `$RESEARCH_ROOT/figures/latex_includes.tex`
 
 Only classify a figure as `manual_blocker` when it truly depends on external assets such as:
 
@@ -194,7 +214,7 @@ This phase should consume:
 
 Expected output:
 
-- `paper/`
+- `$RESEARCH_ROOT/paper/`
 
 ### Phase 4: Compilation
 
@@ -206,7 +226,7 @@ Invoke `/paper-compile`:
 
 Expected output:
 
-- `paper/main.pdf`
+- `$RESEARCH_ROOT/paper/main.pdf`
 
 ### Phase 5: Auto Improvement Loop
 
@@ -218,8 +238,8 @@ Invoke `/auto-paper-improvement-loop`:
 
 Expected output:
 
-- `paper/PAPER_IMPROVEMENT_LOG.md`
-- round-by-round PDFs
+- `$RESEARCH_ROOT/paper/PAPER_IMPROVEMENT_LOG.md`
+- round-by-round PDFs under `$RESEARCH_ROOT/paper/`
 
 ## Final Report
 
@@ -228,11 +248,11 @@ At the end, report:
 - whether the narrative was synthesized or reused
 - whether figures came from `/paper-figure`, `/paper-illustration`, or manual assets
 - whether any `manual_blocker` or `backend_blocker` entries remain
-- whether `paper/main.pdf` compiled successfully
+- whether `$RESEARCH_ROOT/paper/main.pdf` compiled successfully
 
 ## Key Rules
 
-- **`AUTO_REVIEW.md` is canonical.** Do not use model-specific review artifact names.
+- **`$RESEARCH_ROOT/AUTO_REVIEW.md` is canonical.** Do not use model-specific review artifact names.
 - **Keep the public interface model-agnostic.** User-facing docs should say `illustration: ai`, not a specific model name.
 - **Default to browser-first.** The dedicated Gemini web profile is the primary illustration path.
 - **Bootstrap Workflow 3 first.** Run `python3 tools/ensure_paper_runtime.py --phase workflow3` before substeps or rely on the runtime scripts that now self-bootstrap.

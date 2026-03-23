@@ -11,12 +11,29 @@ Deploy and run ML experiment: $ARGUMENTS
 
 This skill is the execution side of Workflow 1.5. In v1 it must do two things:
 - launch the experiment correctly
-- write parseable runtime evidence to `refine-logs/EXPERIMENT_RUNTIME.json`
+- write parseable runtime evidence to `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`
 
 It now also owns the **long-run resume contract**:
 - any run that is multi-step or likely to exceed roughly 10 minutes is a **long run**
 - long runs must be checkpointed and resumable
 - the next launch must auto-resume from the latest valid checkpoint without a manually edited command
+
+## Research Workspace
+
+Resolve the active research workspace before launch:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage run-experiment --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+All experiment artifacts belong under that workspace:
+
+- runtime artifact: `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`
+- run outputs: `$RESEARCH_ROOT/results/<run_name>/`
+- per-run state: `$RESEARCH_ROOT/results/<run_name>/RUN_STATE.json`
+
+Repo-level runtime such as `.venv/`, `.claude/`, and repo-level sync/browser state remains at the repo root.
 
 ## Workflow
 
@@ -123,12 +140,12 @@ Before deploying, ensure the experiment scripts have W&B logging:
 
 ### Step 4: Prepare Runtime Evidence Capture
 
-Before launch, create or refresh `refine-logs/EXPERIMENT_RUNTIME.json`.
+Before launch, create or refresh `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`.
 
 For newly written experiment code, prefer this default layout:
 
 ```text
-results/<run_name>/
+$RESEARCH_ROOT/results/<run_name>/
 ├── checkpoints/
 ├── RUN_STATE.json
 ├── metrics.json   # or project-native results file
@@ -218,7 +235,7 @@ ssh <server> "screen -dmS <exp_name> bash -c '\
   /usr/bin/time -f \"WALL=%e\" sh -c \"CUDA_VISIBLE_DEVICES=<gpu_id> python <script> <args> 2>&1 | tee <log_file>\"; \
   EXIT_CODE=\$?; \
   END_TS=\$(date -Iseconds); \
-  # update refine-logs/EXPERIMENT_RUNTIME.json with exit code, wall time, failure signatures, latest checkpoint, and progress marker \
+  # update $RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json with exit code, wall time, failure signatures, latest checkpoint, and progress marker \
   exit \$EXIT_CODE'"
 ```
 
@@ -236,7 +253,7 @@ For local long-running jobs, use `run_in_background: true` to keep the conversat
 
 ### Step 7: Parse Runtime Evidence
 
-After launch (and again after completion for background jobs), update `refine-logs/EXPERIMENT_RUNTIME.json` with:
+After launch (and again after completion for background jobs), update `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json` with:
 
 - `status`: `running`, `completed`, or `failed`
 - `resume_capable`: `true` / `false`
@@ -277,7 +294,7 @@ Check that the process is running and the GPU is allocated.
 
 A run is not considered healthy until both are true:
 - the process launched successfully
-- `refine-logs/EXPERIMENT_RUNTIME.json` is populated with a usable run record
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json` is populated with a usable run record
 
 ### Step 9: Feishu Notification (if configured)
 
@@ -290,7 +307,7 @@ After deployment is verified, check `~/.claude/feishu.json`:
 `experiment-bridge` assumes this skill leaves behind a usable runtime artifact. Do not finish with only terminal logs.
 
 Minimum contract:
-- `refine-logs/EXPERIMENT_RUNTIME.json` exists
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json` exists
 - the latest run has `command`, `environment`, `exit_code` or `status`, `wall_time` if finished, and `failure_signatures`
 - long runs also have `resume_capable`, `resume_policy`, `output_dir`, `checkpoint_dir`, `run_state_path`, `latest_checkpoint`, `progress_marker`, and `resume_command`
 - log file path is recorded
@@ -299,7 +316,7 @@ Minimum contract:
 ## Key Rules
 
 - ALWAYS check GPU availability first — never blindly assign GPUs
-- ALWAYS write `refine-logs/EXPERIMENT_RUNTIME.json` — debate loops depend on it
+- ALWAYS write `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json` — debate loops depend on it
 - NEVER launch a long run without a stable output root, checkpoint directory, run-state file, and auto-resume path
 - Each experiment gets its own screen session + GPU (remote) or background process (local)
 - Use `tee` to save logs for later inspection

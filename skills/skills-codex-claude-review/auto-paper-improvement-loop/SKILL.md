@@ -9,6 +9,18 @@ description: "Autonomously improve a generated paper via Claude review through c
 
 Autonomously improve the paper at: **$ARGUMENTS**
 
+## Research Workspace
+
+Resolve the active research workspace before the improvement loop:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage auto-paper-improvement-loop --arguments "$ARGUMENTS" --print-path)"
+PAPER_DIR="${ARGUMENTS:-$RESEARCH_ROOT/paper}"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+If the user does not pass an explicit paper path, this skill improves `$RESEARCH_ROOT/paper/`.
+
 ## Context
 
 This skill is designed to run **after** Workflow 3 (`/paper-plan` → `/paper-figure` → `/paper-write` → `/paper-compile`). It takes a compiled paper and iteratively improves it through external LLM review.
@@ -33,7 +45,7 @@ Unlike `/auto-review-loop` (which iterates on **research** — running experimen
 
 ## Inputs
 
-1. **Compiled paper** — `paper/main.pdf` + LaTeX source files
+1. **Compiled paper** — `$RESEARCH_ROOT/paper/main.pdf` + LaTeX source files
 2. **All section `.tex` files** — concatenated for review prompt
 
 ## State Persistence (Compact Recovery)
@@ -69,7 +81,7 @@ Continue on success, "no updates", or a temporary fetch / network failure. If th
 ### Step 0: Preserve Original
 
 ```bash
-cp paper/main.pdf paper/main_round0_original.pdf
+cp "$PAPER_DIR"/main.pdf "$PAPER_DIR"/main_round0_original.pdf
 ```
 
 ### Step 1: Collect Paper Text
@@ -78,7 +90,7 @@ Concatenate all section files into a single text block for the review prompt:
 
 ```bash
 # Collect all sections in order
-for f in paper/sections/*.tex; do
+for f in "$PAPER_DIR"/sections/*.tex; do
     echo "% === $(basename $f) ==="
     cat "$f"
 done > /tmp/paper_full_text.txt
@@ -159,7 +171,7 @@ Parse the review and implement fixes by severity:
 
 ```bash
 python3 tools/ensure_paper_runtime.py --phase compile
-cd paper && latexmk -C && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
+cd "$PAPER_DIR" && latexmk -C && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
 cp main.pdf main_round1.pdf
 ```
 
@@ -202,7 +214,7 @@ Same process as Step 3. Typical Round 2 fixes:
 
 ```bash
 python3 tools/ensure_paper_runtime.py --phase compile
-cd paper && latexmk -C && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
+cd "$PAPER_DIR" && latexmk -C && latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
 cp main.pdf main_round2.pdf
 ```
 
@@ -212,20 +224,20 @@ After the final recompilation, run a format compliance check:
 
 ```bash
 # 1. Page count vs venue limit
-PAGES=$(pdfinfo paper/main.pdf | grep Pages | awk '{print $2}')
+PAGES=$(pdfinfo "$PAPER_DIR"/main.pdf | grep Pages | awk '{print $2}')
 echo "Pages: $PAGES (limit: 9 main body for ICLR/NeurIPS)"
 
 # 2. Overfull hbox warnings (content exceeding margins)
-OVERFULL=$(grep -c "Overfull" paper/main.log 2>/dev/null || echo 0)
+OVERFULL=$(grep -c "Overfull" "$PAPER_DIR"/main.log 2>/dev/null || echo 0)
 echo "Overfull hbox warnings: $OVERFULL"
-grep "Overfull" paper/main.log 2>/dev/null | head -10
+grep "Overfull" "$PAPER_DIR"/main.log 2>/dev/null | head -10
 
 # 3. Underfull hbox warnings (loose spacing)
-UNDERFULL=$(grep -c "Underfull" paper/main.log 2>/dev/null || echo 0)
+UNDERFULL=$(grep -c "Underfull" "$PAPER_DIR"/main.log 2>/dev/null || echo 0)
 echo "Underfull hbox warnings: $UNDERFULL"
 
 # 4. Bad boxes summary
-grep -c "badness" paper/main.log 2>/dev/null || echo "0 badness warnings"
+grep -c "badness" "$PAPER_DIR"/main.log 2>/dev/null || echo "0 badness warnings"
 ```
 
 **Auto-fix patterns:**

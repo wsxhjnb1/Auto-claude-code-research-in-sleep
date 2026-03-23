@@ -11,6 +11,17 @@ Orchestrate a complete paper writing workflow for: **$ARGUMENTS**
 
 Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, `refine-logs/`, and `paper/`.
 
+## Research Workspace
+
+Resolve the active research workspace first:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage paper-writing --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Workflow 3 reads and writes research artifacts under `$RESEARCH_ROOT`. Repo-level `memory/`, `vendor-skills/`, `.venv/`, `.claude/`, and runtime/sync state remain at the repo root.
+
 ## Overview
 
 This workflow is now an artifact-driven chain:
@@ -19,7 +30,7 @@ This workflow is now an artifact-driven chain:
 narrative synthesis → /paper-plan → /paper-figure → /paper-illustration → /paper-write → /paper-compile → /auto-paper-improvement-loop
 ```
 
-If `NARRATIVE_REPORT.md` is missing but Workflow 2 artifacts exist, synthesize it first instead of treating it as a purely manual prerequisite.
+If `$RESEARCH_ROOT/NARRATIVE_REPORT.md` is missing but Workflow 2 artifacts exist, synthesize it first instead of treating it as a purely manual prerequisite.
 
 ## Constants
 
@@ -45,9 +56,9 @@ If `NARRATIVE_REPORT.md` is missing but Workflow 2 artifacts exist, synthesize i
 
 This workflow can start from:
 
-1. `NARRATIVE_REPORT.md`
-2. Workflow 2 artifacts (`AUTO_REVIEW.md`, experiment results, proposal, runtime evidence)
-3. existing `PAPER_PLAN.md`
+1. `$RESEARCH_ROOT/NARRATIVE_REPORT.md`
+2. Workflow 2 artifacts (`$RESEARCH_ROOT/AUTO_REVIEW.md`, experiment results, proposal, runtime evidence)
+3. existing `$RESEARCH_ROOT/PAPER_PLAN.md`
 
 ## Pipeline
 
@@ -71,10 +82,11 @@ This creates/reuses `.venv`, installs Python deps, Playwright/Chromium, and supp
 
 ### Phase 0: Narrative Synthesis
 
-If `NARRATIVE_REPORT.md` is missing, synthesize it:
+If `$RESEARCH_ROOT/NARRATIVE_REPORT.md` is missing, synthesize it:
 
 ```bash
 python3 tools/synthesize_narrative_report.py \
+  --workspace-root "$RESEARCH_ROOT" \
   --proposal refine-logs/FINAL_PROPOSAL.md \
   --plan refine-logs/EXPERIMENT_PLAN.md \
   --results refine-logs/EXPERIMENT_RESULTS.md \
@@ -91,7 +103,7 @@ python3 tools/synthesize_narrative_report.py \
 
 Output:
 
-- `PAPER_PLAN.md`
+- `$RESEARCH_ROOT/PAPER_PLAN.md`
 
 ### Phase 2: Data Figures and Tables
 
@@ -110,6 +122,7 @@ If `ILLUSTRATION = ai`, run:
 
 ```bash
 python3 tools/paper_illustration_cli.py \
+  --workspace-root "$RESEARCH_ROOT" \
   --paper-plan PAPER_PLAN.md \
   --narrative-report NARRATIVE_REPORT.md \
   --auto-review AUTO_REVIEW.md \
@@ -130,9 +143,9 @@ If `ILLUSTRATION = false`, skip AI illustration.
 
 Expected outputs:
 
-- `figures/ai_generated/*.png`
-- `figures/illustration_manifest.json`
-- updated `figures/latex_includes.tex`
+- `$RESEARCH_ROOT/figures/ai_generated/*.png`
+- `$RESEARCH_ROOT/figures/illustration_manifest.json`
+- updated `$RESEARCH_ROOT/figures/latex_includes.tex`
 
 Only mark a figure as `manual_blocker` when it depends on external qualitative assets, screenshots, real photos, or other user-provided media. Browser/API runtime failures stay `backend_blocker`.
 
@@ -144,10 +157,10 @@ Only mark a figure as `manual_blocker` when it depends on external qualitative a
 
 Consume:
 
-- `NARRATIVE_REPORT.md`
-- `PAPER_PLAN.md`
-- `figures/latex_includes.tex`
-- `figures/illustration_manifest.json` when present
+- `$RESEARCH_ROOT/NARRATIVE_REPORT.md`
+- `$RESEARCH_ROOT/PAPER_PLAN.md`
+- `$RESEARCH_ROOT/figures/latex_includes.tex`
+- `$RESEARCH_ROOT/figures/illustration_manifest.json` when present
 
 ### Phase 4: Compilation
 
@@ -157,7 +170,7 @@ Consume:
 
 Output:
 
-- `paper/main.pdf`
+- `$RESEARCH_ROOT/paper/main.pdf`
 
 ### Phase 5: Auto Improvement Loop
 
@@ -167,7 +180,7 @@ Output:
 
 ## Key Rules
 
-- `AUTO_REVIEW.md` is the canonical Workflow 2 review artifact.
+- `$RESEARCH_ROOT/AUTO_REVIEW.md` is the canonical Workflow 2 review artifact.
 - Keep the public interface model-agnostic: `illustration: ai`.
 - Default to the browser-backed path and only use API when explicitly requested.
 - Bootstrap Workflow 3 before substeps or rely on the self-bootstrapping runtime scripts.

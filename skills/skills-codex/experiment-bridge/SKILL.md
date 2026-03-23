@@ -11,15 +11,26 @@ Implement, debate, and deploy experiments from plan: **$ARGUMENTS**
 
 Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/`.
 
+## Research Workspace
+
+Resolve the active research workspace before reading or writing experiment artifacts:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage experiment-bridge --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Research artifacts live under `$RESEARCH_ROOT`; repo-level `memory/`, `vendor-skills/`, `.venv/`, `.claude/`, and runtime/sync state stay at the repo root.
+
 ## Overview
 
 This skill bridges Workflow 1 (idea discovery + method refinement) and Workflow 2 (auto review loop). It takes the experiment plan and turns it into running experiments with initial results.
 
 ```
 Workflow 1 output:                    This skill:                                                         Workflow 2 input:
-refine-logs/EXPERIMENT_PLAN.md   →   implement → debate → sanity/runtime review → deploy → collect   →   initial results ready
-refine-logs/EXPERIMENT_TRACKER.md     code        (secondary Codex agent)   (/run-experiment)            for /auto-review-loop
-refine-logs/FINAL_PROPOSAL.md
+$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md   →   implement → debate → sanity/runtime review → deploy → collect   →   initial results ready
+$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md     code        (secondary Codex agent)   (/run-experiment)            for /auto-review-loop
+$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md
 ```
 
 The debate loop is default-enabled in v1. It is framework-agnostic at the core, but it may recommend faster frameworks, runtimes, or kernel work when runtime evidence clearly justifies it.
@@ -62,10 +73,10 @@ The debate loop is default-enabled in v1. It is framework-agnostic at the core, 
 
 This skill expects one or more of:
 
-1. **`refine-logs/EXPERIMENT_PLAN.md`** (best) — claim-driven experiment roadmap from `/experiment-plan`
-2. **`refine-logs/EXPERIMENT_TRACKER.md`** — run-by-run execution table
-3. **`refine-logs/FINAL_PROPOSAL.md`** — method description for implementation context
-4. **`IDEA_REPORT.md`** — fallback if refine-logs don't exist
+1. **`$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md`** (best) — claim-driven experiment roadmap from `/experiment-plan`
+2. **`$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md`** — run-by-run execution table
+3. **`$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`** — method description for implementation context
+4. **`$RESEARCH_ROOT/IDEA_REPORT.md`** — fallback if refine-logs don't exist
 5. **`memory/experiment-memory.md`** (optional, recommended) — reusable lessons about bad experiment patterns, proven strategies, resume pitfalls, and metrics lessons
 6. **`vendor-skills/INSTALLED_SKILLS.json`** (optional) — repo-local third-party skills staged for this repo
 
@@ -81,7 +92,7 @@ Continue on success, "no updates", or a temporary fetch / network failure. If th
 
 ## State Persistence (Compact Recovery)
 
-Persist state to `refine-logs/EXPERIMENT_DEBATE_STATE.json` after each review round and runtime-review checkpoint:
+Persist state to `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_STATE.json` after each review round and runtime-review checkpoint:
 
 ```json
 {
@@ -89,7 +100,7 @@ Persist state to `refine-logs/EXPERIMENT_DEBATE_STATE.json` after each review ro
   "review_mode": "debate",
   "round": 2,
   "agent_id": "019d0abc-...",
-  "last_runtime_artifact": "refine-logs/EXPERIMENT_RUNTIME.json",
+  "last_runtime_artifact": "$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json",
   "open_blockers": ["R1-F2", "runtime-oom-1"],
   "status": "in_progress",
   "timestamp": "2026-03-22T21:00:00"
@@ -104,12 +115,12 @@ Persist state to `refine-logs/EXPERIMENT_DEBATE_STATE.json` after each review ro
 
 ## Outputs
 
-- `refine-logs/EXPERIMENT_DEBATE_LOG.md` — round-by-round findings with `ACCEPTED`, `DEFERRED`, or `REJECTED` decisions and one-line rationales
-- `refine-logs/EXPERIMENT_DEBATE_STATE.json` — compact recovery state
-- `refine-logs/EXPERIMENT_RUNTIME.json` — parseable runtime evidence from sanity and deployed runs
-- `results/*/RUN_STATE.json` — per-run progress + latest-checkpoint state for long resumable runs
-- `refine-logs/EXPERIMENT_TRACKER.md` — run-by-run execution table with status notes
-- `refine-logs/EXPERIMENT_RESULTS.md` — initial results summary
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_LOG.md` — round-by-round findings with `ACCEPTED`, `DEFERRED`, or `REJECTED` decisions and one-line rationales
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_STATE.json` — compact recovery state
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json` — parseable runtime evidence from sanity and deployed runs
+- `$RESEARCH_ROOT/results/*/RUN_STATE.json` — per-run progress + latest-checkpoint state for long resumable runs
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md` — run-by-run execution table with status notes
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RESULTS.md` — initial results summary
 
 ## Workflow
 

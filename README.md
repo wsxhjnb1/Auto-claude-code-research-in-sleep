@@ -79,11 +79,12 @@ claude mcp add codex -s user -- codex mcp-server
 # 3. Use from the ARIS repo root
 # This repo already ships project-level Claude skills in `.claude/skills/`,
 # so starting Claude from this repo root exposes the main ARIS workflow slash commands directly.
+# The first main-entry call creates and activates `research/<slug>/`; later stages reuse that active workspace by default.
 claude
 > /idea-discovery "your research direction"  # Workflow 1 — be specific! not "NLP" but "factorized gap in discrete diffusion LMs"
 > /experiment-bridge                         # Workflow 1.5 — have a plan? implement + deploy + collect results
 > /auto-review-loop "your paper topic or scope"  # Workflow 2: review → fix → re-review overnight
-> /paper-writing "NARRATIVE_REPORT.md"       # Workflow 3: narrative (or synthesized handoff) → polished PDF
+> /paper-writing "NARRATIVE_REPORT.md"       # Workflow 3: narrative (or synthesized handoff) from the active research workspace → polished PDF
 > /research-pipeline "your research direction"  # Full pipeline: Workflow 1 → 1.5 → 2 → 3 end-to-end
 ```
 
@@ -276,7 +277,7 @@ Don't have a concrete idea yet? Just give a research direction — `/idea-discov
 7. 🔬 **Refine** the top idea into a problem-anchored proposal via iterative GPT-5.4 review
 8. 🧪 **Plan** claim-driven experiments with ablations, budgets, and run order
 
-The output is a ranked `IDEA_REPORT.md` plus a refined proposal (`refine-logs/FINAL_PROPOSAL.md`) and experiment plan (`refine-logs/EXPERIMENT_PLAN.md`) for the top idea. Dead-end ideas are documented too, saving future exploration.
+The output is a ranked `research/<slug>/IDEA_REPORT.md` plus a refined proposal (`research/<slug>/refine-logs/FINAL_PROPOSAL.md`) and experiment plan (`research/<slug>/refine-logs/EXPERIMENT_PLAN.md`) for the top idea. Dead-end ideas are documented too, saving future exploration.
 
 Repo-local memory is part of the contract now: `/idea-discovery` reads `memory/ideation-memory.md` before the next search / regeneration pass and refreshes it through `/research-memory` after top-idea selection, major eliminations, and reviewer-driven scope changes.
 
@@ -348,7 +349,7 @@ Repo-local memory is part of the contract now: `/idea-discovery` reads `memory/i
 
 Already have an experiment plan (from Workflow 1 or your own)? `/experiment-bridge` turns it into running code:
 
-1. 📋 **Parse** the experiment plan (`refine-logs/EXPERIMENT_PLAN.md`)
+1. 📋 **Parse** the experiment plan (`research/<slug>/refine-logs/EXPERIMENT_PLAN.md`)
 2. 💻 **Implement** experiment scripts (reuse existing code, add proper argparse/logging/seeds/checkpoints/auto-resume)
 3. ⚔️ **Dual-AI debate loop** — GPT-5.4 reviews correctness first, including long-run resumeability, then optimization / stability (`code review mode: debate` by default)
 4. ✅ **Sanity + runtime review** — run the smallest experiment first, capture `EXPERIMENT_RUNTIME.json` plus resume metadata, do a resume smoke test for long runs, and re-enter review on OOM / NaN / malformed outputs / slowdown
@@ -386,7 +387,7 @@ Workflow 1.5 now also reads `memory/experiment-memory.md` before experiment rede
 
 **Skills involved:** `experiment-bridge` + `run-experiment` + `monitor-experiment`
 
-> 💡 **One-command shortcut:** `/experiment-bridge` reads `refine-logs/EXPERIMENT_PLAN.md` automatically. Or point it to any plan: `/experiment-bridge "my_plan.md"`.
+> 💡 **One-command shortcut:** `/experiment-bridge` reads the active research workspace's `refine-logs/EXPERIMENT_PLAN.md` automatically. Or point it to any plan: `/experiment-bridge "research/my-topic/refine-logs/EXPERIMENT_PLAN.md"`.
 
 > ⚙️ `CODE_REVIEW`, `CODE_REVIEW_MODE`, `RUNTIME_REVIEW`, `OPTIMIZATION_REVIEW`, `LIGHT_PROFILE`, `LONG_RUN_RESUME`, `LONG_RUN_THRESHOLD`, `AUTO_DEPLOY`, `SANITY_FIRST`, and `MAX_PARALLEL_RUNS` are configurable — see [Customization](#%EF%B8%8F-customization).
 
@@ -427,7 +428,7 @@ Each major round now ends with a short reflection and a `/research-memory "revie
 
 > 💡 **One-command shortcut:** `/auto-review-loop "your paper topic"` runs this entire workflow automatically.
 >
-> **What to pass as argument?** A short topic or scope is enough — the skill automatically reads your project's narrative docs (`NARRATIVE_REPORT.md`), memory files, experiment results, and prior reviews to build the full context for GPT-5.4. Examples:
+> **What to pass as argument?** A short topic or scope is enough — the skill automatically reads the active research workspace's narrative docs (`research/<slug>/NARRATIVE_REPORT.md`), experiment results, and prior reviews, plus the repo-level `memory/` files, to build the full context for GPT-5.4. Examples:
 > - `/auto-review-loop "factorized gap in discrete diffusion LMs"` — broad topic, skill finds everything
 > - `/auto-review-loop "focus on Section 3-5, our CRF results are weak"` — targeted scope with hints
 > - `/auto-review-loop` — also works: skill reads project files and infers the topic
@@ -439,7 +440,7 @@ Each major round now ends with a short reflection and a `/research-memory "revie
 - 🧠 **Prefer reframing over new experiments** — when both can address a weakness, chooses the cheaper path
 - 🪞 **No hiding weaknesses** — explicit rule: "Do NOT hide weaknesses to game a positive score"
 - 🔧 **Fix before re-review** — must actually implement fixes before resubmitting; no empty promises
-- 💾 **Compact recovery** — persists state (`REVIEW_STATE.json`) after each round. If the context window fills up and auto-compacts mid-loop, the workflow reads the state file and resumes from where it left off — no human intervention needed
+- 💾 **Compact recovery** — persists state (`research/<slug>/refine-logs/REVIEW_STATE.json`) after each round. If the context window fills up and auto-compacts mid-loop, the workflow reads the state file and resumes from where it left off — no human intervention needed
 
 > ⚙️ MAX_ROUNDS, score threshold, and GPU limits are configurable — see [Customization](#%EF%B8%8F-customization).
 
@@ -460,7 +461,7 @@ Each major round now ends with a short reflection and a `/research-memory "revie
 │        narrative synthesis                                         │
 │                │                                                   │
 │                ▼                                                   │
-│   NARRATIVE_REPORT.md ──► /paper-plan ──► /paper-figure            │
+│ research/<slug>/NARRATIVE_REPORT.md ──► /paper-plan ──► /paper-figure │
 │                │                    │                │             │
 │                │                    └──────┬─────────┘             │
 │                │                           ▼                       │
@@ -479,27 +480,27 @@ Each major round now ends with a short reflection and a `/research-memory "revie
 
 **Skills involved:** `paper-plan` + `paper-figure` + `paper-illustration` + `paper-write` + `paper-compile` + `auto-paper-improvement-loop` + (post-acceptance) `paper-poster` + `paper-slides`
 
-> **One-command shortcut:** `/paper-writing "NARRATIVE_REPORT.md"` runs this entire workflow automatically. If `NARRATIVE_REPORT.md` is missing but Workflow 1.5 / 2 artifacts exist, the pipeline synthesizes it first.
+> **One-command shortcut:** `/paper-writing "NARRATIVE_REPORT.md"` runs this entire workflow automatically inside the active research workspace. If `NARRATIVE_REPORT.md` is missing there but Workflow 1.5 / 2 artifacts exist, the pipeline synthesizes it first.
 
-**Input:** A `NARRATIVE_REPORT.md` describing the research: claims, experiments, results, figures. If that file is missing, `paper-writing` synthesizes a draft from `AUTO_REVIEW.md`, proposal/experiment artifacts, and `EXPERIMENT_RUNTIME.json`. The more detailed the narrative (especially figure descriptions and quantitative results), the better the output. See [`templates/NARRATIVE_REPORT_TEMPLATE.md`](templates/NARRATIVE_REPORT_TEMPLATE.md) for a complete example.
+**Input:** A `research/<slug>/NARRATIVE_REPORT.md` describing the research: claims, experiments, results, figures. If that file is missing, `paper-writing` synthesizes a draft from `research/<slug>/AUTO_REVIEW.md`, proposal/experiment artifacts, and `research/<slug>/refine-logs/EXPERIMENT_RUNTIME.json`. The more detailed the narrative, especially figure descriptions and quantitative results, the better the output. See [`templates/NARRATIVE_REPORT_TEMPLATE.md`](templates/NARRATIVE_REPORT_TEMPLATE.md) for a complete example.
 
-**Output:** A submission-ready `paper/` directory with LaTeX source, clean `.bib` (only cited entries), and compiled PDF.
+**Output:** A submission-ready `research/<slug>/paper/` directory with LaTeX source, clean `.bib` (only cited entries), and compiled PDF.
 
 **Key features:**
 - 📐 **Claims-Evidence Matrix** — every claim maps to evidence, every experiment supports a claim
 - 📊 **Auto figure generation** — line plots, bar charts, comparison tables from JSON data
-- 🎨 **AI illustration runtime** — hero/method/architecture figures go through the PaperBanana-derived multi-stage pipeline and emit `figures/illustration_manifest.json`
+- 🎨 **AI illustration runtime** — hero/method/architecture figures go through the PaperBanana-derived multi-stage pipeline and emit `research/<slug>/figures/illustration_manifest.json`
 - 🧹 **Clean bib** — automated filtering removes uncited entries (948→215 lines in testing). Real BibTeX from [DBLP](https://dblp.org)/[CrossRef](https://www.crossref.org) instead of LLM-generated entries
 - 📄 **Flexible sections** — 5-8 sections depending on paper type (theory papers often need 7)
 - 🔍 **GPT-5.4 review** — each step optionally reviewed by external LLM
 - ✂️ **De-AI polish** — removes AI writing patterns (delve, pivotal, landscape...)
 - 🎯 **Page verification** — `pdftotext`-based precise check that main body fits page limit
 
-> ⚠️ **Figure generation scope:** `/paper-figure` auto-generates **data-driven plots** (training curves, bar charts, heatmaps) and **comparison tables** from JSON/CSV. For **hero figures, architecture diagrams, and method figures**: `illustration: ai` (default) runs the PaperBanana-derived CLI and writes `figures/ai_generated/*`, `figures/illustration_manifest.json`, and updated `figures/latex_includes.tex`; `illustration: mermaid` generates Mermaid diagrams for free; `illustration: false` skips AI figures entirely. `manual_blocker` is reserved for true external assets; sign-in-required browser states are recorded as `needs_login`; CAPTCHA / unusual-traffic states are recorded as `needs_human_verification`; other browser/API runtime failures are recorded as `backend_blocker`.
+> ⚠️ **Figure generation scope:** `/paper-figure` auto-generates **data-driven plots** (training curves, bar charts, heatmaps) and **comparison tables** from JSON/CSV. For **hero figures, architecture diagrams, and method figures**: `illustration: ai` (default) runs the PaperBanana-derived CLI and writes `research/<slug>/figures/ai_generated/*`, `research/<slug>/figures/illustration_manifest.json`, and updated `research/<slug>/figures/latex_includes.tex`; `illustration: mermaid` generates Mermaid diagrams for free; `illustration: false` skips AI figures entirely. `manual_blocker` is reserved for true external assets; sign-in-required browser states are recorded as `needs_login`; CAPTCHA / unusual-traffic states are recorded as `needs_human_verification`; other browser/API runtime failures are recorded as `backend_blocker`.
 >
 > **AI illustration backend setup** (for `illustration: ai`): default path is browser-first and now auto-bootstrapped. First run of Workflow 3 or `paper_illustration_cli.py` creates `.venv`, installs Playwright, installs Chromium, and writes `refine-logs/PAPER_RUNTIME_STATE.json`. The runtime now tracks the Playwright-managed Chromium revision there and automatically refreshes that managed browser when the installed revision drifts from the current Playwright package; explicit external browsers remain unmanaged. The dedicated Gemini automation profile now enforces a strict single-window budget: duplicate blank tabs, stale Gemini tabs, duplicate login tabs, duplicate verification tabs, and other stray pages are pruned automatically. When the dedicated Gemini profile is not signed in, or Google asks for human verification such as “I’m not a robot” / unusual traffic, the shared browser backend automatically opens or reuses a dedicated interactive Gemini window, waits for recovery, and only returns `needs_login` or `needs_human_verification` if the wait times out; only the single required recovery page stays open in that case. When recovery succeeds, the backend closes the interactive window itself, reopens the same dedicated profile in headless Playwright, and continues `status` / `render_image` in the background, leaving no visible automation window behind. Before each render, the backend resets Gemini into a fresh temporary chat, explicitly enables the image tool, prefers Thinking/Pro mode and falls back to Fast/Flash only if necessary, wraps the browser prompt in an image-only instruction so Gemini returns an image instead of prose, and auto-retries if stale conversation context leaks in. If the temporary-chat surface keeps leaking stale artifacts or does not expose a reliable image path, the retry automatically escalates to `new_chat` while preserving the same dedicated profile. On Linux hosts without non-interactive `sudo`, the bootstrap automatically falls back to `python -m playwright install chromium` instead of blocking on `--with-deps`. Manual fallback if bootstrap is disabled or fails: `python3 -m pip install -r mcp-servers/gemini-browser/requirements.txt` and `python3 -m playwright install chromium`. Optional Claude Code plugin: `claude mcp add gemini-browser -s user -- python3 /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/gemini-browser/server.py`. Set `ILLUSTRATION_BACKEND=api` only if you want the old API-backed path, then configure `PAPER_ILLUSTRATION_API_KEY` or `GEMINI_API_KEY`. Optional references can be passed through `--reference-dir`; if none exist, the runtime falls back to a no-retrieval mode.
 
-**Tested end-to-end:** Generated a 9-page ICLR 2026 theory paper (7 sections, 29 citations, 4 figures, 2 comparison tables) from a single NARRATIVE_REPORT.md — zero compilation errors, zero undefined references.
+**Tested end-to-end:** Generated a 9-page ICLR 2026 theory paper (7 sections, 29 citations, 4 figures, 2 comparison tables) from a single active-workspace `NARRATIVE_REPORT.md` — zero compilation errors, zero undefined references.
 
 #### Auto Paper Improvement Loop ✨
 
@@ -1338,7 +1339,7 @@ claude
 
 ### Planned
 
-- [ ] **Daemon mode** — auto-restart Claude Code session via `launchd`/`systemd` for true unattended operation. Currently the orchestration layer requires an active CLI session; state files (`REVIEW_STATE.json`, `AUTO_REVIEW.md`) support resuming across sessions, but relaunch is manual ([#11](https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep/issues/11))
+- [ ] **Daemon mode** — auto-restart Claude Code session via `launchd`/`systemd` for true unattended operation. Currently the orchestration layer requires an active CLI session; state files in the active research workspace (`research/<slug>/refine-logs/REVIEW_STATE.json`, `research/<slug>/AUTO_REVIEW.md`) support resuming across sessions, but relaunch is manual ([#11](https://github.com/wanshuiyin/Auto-claude-code-research-in-sleep/issues/11))
 - [ ] **Reference-style figure generation** — read figures from reference PDFs → identify chart type, color scheme, layout → generate same-style figures with your own data. Sub-goal remaining: **Data charts** (extract color/font style → matplotlib rcParams). Method diagrams ✅ solved by `paper-illustration`
 - [ ] **Workflow execution report** — after each workflow (1/1.5/2/3) completes, auto-generate a structured summary: what was done, key decisions made, experiments run, results obtained, scores, and time spent. Output as `WORKFLOW_REPORT.md` for progress tracking, team reporting, and supervisor updates
 - [ ] **Document-based pipeline input** — support passing a detailed document (e.g., `RESEARCH_BRIEF.md`) as input to `/research-pipeline` or `/idea-discovery` instead of a one-line prompt. Many research directions need nuanced context (prior results, constraints, domain knowledge) that can't fit in a single sentence. The document would be parsed for problem definition, constraints, existing results, and specific requirements

@@ -9,6 +9,17 @@ allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, Agent, mcp__codex__codex,
 
 Generate publication-quality academic illustrations for: **$ARGUMENTS**
 
+## Research Workspace
+
+Resolve the active research workspace before rendering:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage paper-illustration --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Treat `PAPER_PLAN.md`, `NARRATIVE_REPORT.md`, `AUTO_REVIEW.md`, `figures/`, and `paper/` as relative to `$RESEARCH_ROOT` unless the user explicitly supplies an absolute path or a `research/...` path.
+
 This skill is now backed by real runtime code:
 
 ```bash
@@ -80,7 +91,7 @@ Read the relevant figure spec from `PAPER_PLAN.md` if it exists. Prefer figures 
 - workflow
 - overview
 
-Use `AUTO_REVIEW.md`'s `## Method Description` as the primary method-summary input when available.
+Use `$RESEARCH_ROOT/AUTO_REVIEW.md`'s `## Method Description` as the primary method-summary input when available.
 
 ### Step 2: Run the PaperBanana-Derived CLI
 
@@ -92,6 +103,7 @@ python3 tools/ensure_paper_runtime.py --phase illustration
 
 ```bash
 python3 tools/paper_illustration_cli.py \
+  --workspace-root "$RESEARCH_ROOT" \
   --paper-plan PAPER_PLAN.md \
   --narrative-report NARRATIVE_REPORT.md \
   --auto-review AUTO_REVIEW.md \
@@ -107,9 +119,9 @@ The CLI will:
 4. reset each render into a fresh temporary chat, explicitly enable Gemini's image tool, prefer Thinking/Pro mode with Fast/Flash fallback, wrap the browser prompt in an image-only instruction, and auto-retry if stale chat context leaks in
 5. if temporary-chat retries still surface stale artifacts or no reliable image path, escalate that retry to `new_chat` while preserving the dedicated profile
 6. fall back to the Retriever → Planner → Stylist → Visualizer → Critic loop only when `ILLUSTRATION_BACKEND=api`
-7. write final images to `figures/ai_generated/`
-8. write `figures/illustration_manifest.json`
-9. append/update the illustration snippets inside `figures/latex_includes.tex`
+7. write final images to `$RESEARCH_ROOT/figures/ai_generated/`
+8. write `$RESEARCH_ROOT/figures/illustration_manifest.json`
+9. append/update the illustration snippets inside `$RESEARCH_ROOT/figures/latex_includes.tex`
 
 If you want plugin-style access inside Claude Code, the shared browser backend is also exposed through:
 
@@ -176,9 +188,9 @@ The dedicated Gemini profile is now treated as an automation-owned surface. It s
 
 ## Outputs
 
-- `figures/ai_generated/*.png` — rendered AI illustrations
-- `figures/illustration_manifest.json` — parseable illustration status
-- `figures/latex_includes.tex` — illustration snippets merged with the standard figure include file
+- `$RESEARCH_ROOT/figures/ai_generated/*.png` — rendered AI illustrations
+- `$RESEARCH_ROOT/figures/illustration_manifest.json` — parseable illustration status
+- `$RESEARCH_ROOT/figures/latex_includes.tex` — illustration snippets merged with the standard figure include file
 
 ## Key Rules
 
@@ -187,5 +199,5 @@ The dedicated Gemini profile is now treated as an automation-owned surface. It s
 - **Default to browser-first.** Gemini web automation is the primary path; API is explicit fallback.
 - **Bootstrap before rendering.** The first step is `python3 tools/ensure_paper_runtime.py --phase illustration`.
 - **Preserve provenance.** Vendored code stays under `third_party/paperbanana/` with Apache-2.0 attribution.
-- **Prefer `AUTO_REVIEW.md` over ad hoc summaries.** That file is the canonical review artifact for Workflow 2.
+- **Prefer `$RESEARCH_ROOT/AUTO_REVIEW.md` over ad hoc summaries.** That file is the canonical review artifact for Workflow 2.
 - **Do not mark architecture diagrams as manual by default.** Try the AI illustration pipeline first.

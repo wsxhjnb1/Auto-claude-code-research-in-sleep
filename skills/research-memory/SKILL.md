@@ -20,21 +20,31 @@ This skill turns one stage's outcomes into reusable project memory. It does not 
 
 The memory scope is **repo-local only**. Files live under `memory/`.
 
+## Research Workspace Context
+
+`memory/` stays repo-level and shared across all research workspaces. The source artifacts you summarize should normally come from the active research workspace:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py status --print-path 2>/dev/null || true)"
+```
+
+If `RESEARCH_ROOT` is set, treat artifact paths below as relative to that workspace. If there is no active workspace, use explicit paths supplied by the current workflow or user.
+
 ## Inputs
 
 Read the smallest relevant set of artifacts for the current context:
 
 - Workflow 1:
-  - `IDEA_REPORT.md`
-  - `refine-logs/FINAL_PROPOSAL.md`
-  - `refine-logs/EXPERIMENT_PLAN.md`
+  - `$RESEARCH_ROOT/IDEA_REPORT.md`
+  - `$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`
+  - `$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md`
 - Workflow 1.5:
-  - `refine-logs/EXPERIMENT_RESULTS.md`
-  - `refine-logs/EXPERIMENT_RUNTIME.json`
-  - `refine-logs/EXPERIMENT_DEBATE_LOG.md`
-  - `refine-logs/EXPERIMENT_TRACKER.md`
+  - `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RESULTS.md`
+  - `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`
+  - `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_LOG.md`
+  - `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md`
 - Workflow 2:
-  - `AUTO_REVIEW.md`
+  - `$RESEARCH_ROOT/AUTO_REVIEW.md`
   - recent figures / metrics / runtime artifacts when needed
 
 If `memory/ideation-memory.md` or `memory/experiment-memory.md` is missing, create it using the default structure.

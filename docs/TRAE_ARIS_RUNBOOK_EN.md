@@ -168,7 +168,7 @@ Use the following sub-skills in order:
 5. Use research-refine-pipeline skill — Method refinement + Experiment planning
 ```
 
-> **Tip:** If context is too long, split each stage into separate conversations and pass results via files (e.g., `IDEA_REPORT.md`, `refine-logs/FINAL_PROPOSAL.md`).
+> **Tip:** If context is too long, split each stage into separate conversations and pass results via files inside the active research workspace (e.g., `research/<slug>/IDEA_REPORT.md`, `research/<slug>/refine-logs/FINAL_PROPOSAL.md`).
 
 ### Workflow 1.5: Experiment Bridge
 
@@ -211,7 +211,7 @@ Use MCP tool mcp__codex__codex for external review.
 **Trae equivalent:**
 ```
 Use paper-writing skill.
-Input: NARRATIVE_REPORT.md in project root, or let the updated workflow synthesize it first from Workflow 2 artifacts.
+Input: `research/<slug>/NARRATIVE_REPORT.md` in the active research workspace, or let the updated workflow synthesize it first from Workflow 2 artifacts.
 
 Use the following sub-skills in order:
 1. Use paper-plan skill — Outline + claims-evidence matrix
@@ -226,10 +226,10 @@ Use the following sub-skills in order:
 
 | Stage | Execution | Output Files |
 |--------|-----------|--------------|
-| 1 | Idea Discovery: Use `idea-discovery` skill + research direction | `IDEA_REPORT.md`, `refine-logs/FINAL_PROPOSAL.md`, `refine-logs/EXPERIMENT_PLAN.md` |
-| 2 | Experiment Bridge: Use `experiment-bridge` skill | Experiment scripts and results |
-| 3 | Auto Review: Use `auto-review-loop` skill | `AUTO_REVIEW.md` |
-| 4 | Paper Writing: Use `paper-writing` skill + `NARRATIVE_REPORT.md` | `paper/` directory |
+| 1 | Idea Discovery: Use `idea-discovery` skill + research direction | `research/<slug>/IDEA_REPORT.md`, `research/<slug>/refine-logs/FINAL_PROPOSAL.md`, `research/<slug>/refine-logs/EXPERIMENT_PLAN.md` |
+| 2 | Experiment Bridge: Use `experiment-bridge` skill | experiment scripts, `research/<slug>/results/`, and `research/<slug>/refine-logs/EXPERIMENT_RUNTIME.json` |
+| 3 | Auto Review: Use `auto-review-loop` skill | `research/<slug>/AUTO_REVIEW.md` |
+| 4 | Paper Writing: Use `paper-writing` skill + `research/<slug>/NARRATIVE_REPORT.md` | `research/<slug>/paper/` directory |
 
 Each stage reads output files from the previous stage, so context can be passed across different conversations.
 
@@ -245,18 +245,18 @@ Each stage reads output files from the previous stage, so context can be passed 
 
 | File | Purpose | Typical workflow |
 |---|---|---|
-| `REVIEW_STATE.json` | Tracks auto-review progress | auto-review-loop |
-| `AUTO_REVIEW.md` | Cumulative review log | auto-review-loop |
-| `IDEA_REPORT.md` | Ranked ideas and initial findings | idea-discovery |
-| `PAPER_PLAN.md` | Outline + claim-evidence matrix | paper-plan |
+| `research/<slug>/refine-logs/REVIEW_STATE.json` | Tracks auto-review progress | auto-review-loop |
+| `research/<slug>/AUTO_REVIEW.md` | Cumulative review log | auto-review-loop |
+| `research/<slug>/IDEA_REPORT.md` | Ranked ideas and initial findings | idea-discovery |
+| `research/<slug>/PAPER_PLAN.md` | Outline + claim-evidence matrix | paper-plan |
 | `PAPER_IMPROVEMENT_LOG.md` | Paper improvement rounds log | auto-paper-improvement-loop |
 
 Recovery example:
 
 ```text
 @skills/auto-review-loop/SKILL.md
-@REVIEW_STATE.json
-@AUTO_REVIEW.md
+@research/<slug>/refine-logs/REVIEW_STATE.json
+@research/<slug>/AUTO_REVIEW.md
 Resume the auto review loop from saved state.
 ```
 
@@ -295,7 +295,7 @@ Use research-review skill to review my research: [description or file reference]
 Use auto-review-loop skill. Topic: "your paper topic".
 
 # Paper writing
-Use paper-writing skill based on NARRATIVE_REPORT.md.
+Use paper-writing skill based on `research/<slug>/NARRATIVE_REPORT.md`.
 
 # Deploy experiment
 Use run-experiment skill. Deploy: python train.py --lr 1e-4 --epochs 100

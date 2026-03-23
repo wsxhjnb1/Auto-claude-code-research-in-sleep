@@ -11,7 +11,7 @@ ARIS workflows can run for hours (idea discovery, auto-review loops, overnight t
 1. **Context compaction** — when the context window fills up, Claude Code auto-compresses prior messages. After compaction, the LLM only has a compressed summary and may forget which stage you're in, what experiments are running, or what to do next.
 2. **Proactive new sessions** — LLM capability degrades noticeably when context usage exceeds ~50%. Experienced users proactively start fresh sessions to restore full model capability, rather than waiting for auto-compaction. This means the LLM must reconstruct project state from disk.
 
-ARIS already persists some state to files (`REVIEW_STATE.json`, `AUTO_REVIEW.md`), but **there is no systematic mechanism to ensure the LLM reads those files on recovery**. After compaction, it often doesn't.
+ARIS already persists some state to files inside the active research workspace (for example `research/<slug>/refine-logs/REVIEW_STATE.json` and `research/<slug>/AUTO_REVIEW.md`), but **there is no systematic mechanism to ensure the LLM reads those files on recovery**. After compaction, it often doesn't.
 
 ## The Core Solution: Pipeline Status
 
@@ -175,11 +175,15 @@ if grep -q "training_status:.*running" "$PROJECT_DIR/CLAUDE.md" 2>/dev/null; the
   OUTPUT="$OUTPUT\n\n[session-restore] Active training detected — check remote status and rebuild monitoring."
 fi
 
-# 4. Check for REVIEW_STATE.json (auto-review-loop recovery)
-if [ -f "$PROJECT_DIR/REVIEW_STATE.json" ]; then
-  RS_STATUS=$(python3 -c "import json; d=json.load(open('$PROJECT_DIR/REVIEW_STATE.json')); print(d.get('status',''))" 2>/dev/null)
-  if [ "$RS_STATUS" = "in_progress" ]; then
-    OUTPUT="$OUTPUT\n\n[session-restore] REVIEW_STATE.json found (in_progress) — auto-review-loop can resume."
+# 4. Check the active research workspace for REVIEW_STATE.json (auto-review-loop recovery)
+ACTIVE_RESEARCH="$PROJECT_DIR/research/ACTIVE_RESEARCH.json"
+if [ -f "$ACTIVE_RESEARCH" ]; then
+  REVIEW_STATE=$(python3 -c "import json; from pathlib import Path; data=json.load(open('$ACTIVE_RESEARCH')); print(Path(data['path']) / 'refine-logs' / 'REVIEW_STATE.json')" 2>/dev/null)
+  if [ -n "$REVIEW_STATE" ] && [ -f "$REVIEW_STATE" ]; then
+    RS_STATUS=$(python3 -c "import json; d=json.load(open('$REVIEW_STATE')); print(d.get('status',''))" 2>/dev/null)
+    if [ "$RS_STATUS" = "in_progress" ]; then
+      OUTPUT="$OUTPUT\n\n[session-restore] Active research REVIEW_STATE.json found (in_progress) — auto-review-loop can resume."
+    fi
   fi
 fi
 
@@ -262,7 +266,7 @@ echo "[pre-compact] Before continuing, ensure these are up to date:"
 echo "  1. CLAUDE.md Pipeline Status (stage, idea, active_tasks, next)"
 echo "  2. docs/research_contract.md (current idea context and results)"
 echo "  3. EXPERIMENT_TRACKER.md (any unreported results)"
-echo "  4. REVIEW_STATE.json (if running auto-review-loop)"
+echo "  4. research/<slug>/refine-logs/REVIEW_STATE.json (if running auto-review-loop)"
 echo "[pre-compact] After compaction, read CLAUDE.md and docs/research_contract.md to recover."
 HOOKEOF
 chmod +x ~/.claude/hooks/pre-compact-remind.sh

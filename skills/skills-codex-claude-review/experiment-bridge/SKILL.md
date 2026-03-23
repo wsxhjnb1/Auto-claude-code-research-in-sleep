@@ -3,11 +3,26 @@ name: "experiment-bridge"
 description: "Workflow 1.5: Bridge between idea discovery and auto review. Reads EXPERIMENT_PLAN.md, implements experiment code, runs a bounded debate using Claude Code via claude-review MCP, deploys to GPU, and collects initial results."
 ---
 
-> Override for Codex users who want **Claude Code**, not a second Codex agent, to act as the reviewer. Use it from a checked-out ARIS repo together with the repo-local `skills/skills-codex/` base package.
+> Override for Codex users who want **Claude Code**, not a second Codex agent, to act as the reviewer. Install this package **after** `skills/skills-codex/*`.
 
 # Workflow 1.5: Experiment Bridge
 
 Implement, debate, and deploy experiments from plan: **$ARGUMENTS**
+
+## Repo-Root Requirement
+
+Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/`.
+
+## Research Workspace
+
+Resolve the active research workspace before reading or writing experiment artifacts:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage experiment-bridge --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Research artifacts live under `$RESEARCH_ROOT`; repo-level `memory/`, `vendor-skills/`, `.venv/`, `.claude/`, and runtime/sync state stay at the repo root.
 
 ## Overview
 
@@ -15,16 +30,12 @@ This skill bridges Workflow 1 (idea discovery + method refinement) and Workflow 
 
 ```
 Workflow 1 output:                    This skill:                                                         Workflow 2 input:
-refine-logs/EXPERIMENT_PLAN.md   →   implement → debate → sanity/runtime review → deploy → collect   →   initial results ready
-refine-logs/EXPERIMENT_TRACKER.md     code        (Claude reviewer via `claude-review` MCP)   (/run-experiment)            for /auto-review-loop
-refine-logs/FINAL_PROPOSAL.md
+$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md   →   implement → debate → sanity/runtime review → deploy → collect   →   initial results ready
+$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md     code        (Claude reviewer via `claude-review` MCP)   (/run-experiment)            for /auto-review-loop
+$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md
 ```
 
 The debate loop is default-enabled in v1. It is framework-agnostic at the core, but it may recommend faster frameworks, runtimes, or kernel work when runtime evidence clearly justifies it.
-
-## Repo-Root Requirement
-
-Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/`.
 
 ## Constants
 
@@ -57,11 +68,11 @@ Run this workflow from the root of a checked-out ARIS repo or fork. It depends o
 
 ## Prerequisites
 
-- Use the repo-local `skills/skills-codex/` tree as the base skill package.
-- Layer this repo-local `skills/skills-codex-claude-review/` override on top of that base package.
+- Install the base Codex-native skills first: copy `skills/skills-codex/*` into `~/.codex/skills/`.
+- Then install this overlay package: copy `skills/skills-codex-claude-review/*` into `~/.codex/skills/` and allow it to overwrite the same skill names.
 - Register the local reviewer bridge:
   ```bash
-  codex mcp add claude-review -- python3 /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/server.py
+  codex mcp add claude-review -- python3 ~/.codex/mcp-servers/claude-review/server.py
   ```
 - This gives Codex access to `mcp__claude-review__review_start`, `mcp__claude-review__review_reply_start`, and `mcp__claude-review__review_status`.
 
@@ -70,10 +81,10 @@ Run this workflow from the root of a checked-out ARIS repo or fork. It depends o
 
 This skill expects one or more of:
 
-1. **`refine-logs/EXPERIMENT_PLAN.md`** (best) — claim-driven experiment roadmap from `/experiment-plan`
-2. **`refine-logs/EXPERIMENT_TRACKER.md`** — run-by-run execution table
-3. **`refine-logs/FINAL_PROPOSAL.md`** — method description for implementation context
-4. **`IDEA_REPORT.md`** — fallback if refine-logs don't exist
+1. **`$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md`** (best) — claim-driven experiment roadmap from `/experiment-plan`
+2. **`$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md`** — run-by-run execution table
+3. **`$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`** — method description for implementation context
+4. **`$RESEARCH_ROOT/IDEA_REPORT.md`** — fallback if refine-logs don't exist
 5. **`memory/experiment-memory.md`** (optional, recommended) — reusable lessons about bad experiment patterns, proven strategies, resume pitfalls, and metrics lessons
 6. **`vendor-skills/INSTALLED_SKILLS.json`** (optional) — repo-local third-party skills staged for this repo
 
@@ -89,7 +100,7 @@ Continue on success, "no updates", or a temporary fetch / network failure. If th
 
 ## State Persistence (Compact Recovery)
 
-Persist state to `refine-logs/EXPERIMENT_DEBATE_STATE.json` after each review round and runtime-review checkpoint:
+Persist state to `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_STATE.json` after each review round and runtime-review checkpoint:
 
 ```json
 {
@@ -97,7 +108,7 @@ Persist state to `refine-logs/EXPERIMENT_DEBATE_STATE.json` after each review ro
   "review_mode": "debate",
   "round": 2,
   "thread_id": "019d0abc-...",
-  "last_runtime_artifact": "refine-logs/EXPERIMENT_RUNTIME.json",
+  "last_runtime_artifact": "$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json",
   "open_blockers": ["R1-F2", "runtime-oom-1"],
   "status": "in_progress",
   "timestamp": "2026-03-22T21:00:00"
@@ -112,12 +123,12 @@ Persist state to `refine-logs/EXPERIMENT_DEBATE_STATE.json` after each review ro
 
 ## Outputs
 
-- `refine-logs/EXPERIMENT_DEBATE_LOG.md` — round-by-round findings with `ACCEPTED`, `DEFERRED`, or `REJECTED` decisions and one-line rationales
-- `refine-logs/EXPERIMENT_DEBATE_STATE.json` — compact recovery state
-- `refine-logs/EXPERIMENT_RUNTIME.json` — parseable runtime evidence from sanity and deployed runs
-- `results/*/RUN_STATE.json` — per-run progress + latest-checkpoint state for long resumable runs
-- `refine-logs/EXPERIMENT_TRACKER.md` — run-by-run execution table with status notes
-- `refine-logs/EXPERIMENT_RESULTS.md` — initial results summary
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_LOG.md` — round-by-round findings with `ACCEPTED`, `DEFERRED`, or `REJECTED` decisions and one-line rationales
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_STATE.json` — compact recovery state
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json` — parseable runtime evidence from sanity and deployed runs
+- `$RESEARCH_ROOT/results/*/RUN_STATE.json` — per-run progress + latest-checkpoint state for long resumable runs
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md` — run-by-run execution table with status notes
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RESULTS.md` — initial results summary
 
 ## Workflow
 
@@ -164,7 +175,7 @@ git clone <BASE_REPO> base_repo/
 For each milestone (in order), write the experiment scripts:
 
 1. **Check existing code** — scan the project (or cloned `base_repo/`) for existing experiment scripts, model code, data loaders. Reuse as much as possible.
-   - Also inspect any relevant repo-local vendor skill staged under `vendor-skills/`. Reuse it locally if it fits and keep it alongside the rest of this repo-local workflow.
+   - Also inspect any relevant repo-local vendor skill staged under `vendor-skills/`. Reuse it locally if it fits, but keep it inside this repo.
 2. **Implement missing pieces:**
    - training scripts with proper argparse (all hyperparameters configurable)
    - evaluation scripts computing the specified metrics

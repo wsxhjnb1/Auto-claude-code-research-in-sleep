@@ -11,11 +11,22 @@ Autonomously iterate: review → implement fixes → re-review, until the extern
 
 ## Context: $ARGUMENTS
 
+## Research Workspace
+
+Resolve the active research workspace before the loop starts:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage auto-review-loop-llm --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Treat review artifacts, runtime state, and experiment evidence as relative to `$RESEARCH_ROOT`.
+
 ## Constants
 
 - MAX_ROUNDS = 4
 - POSITIVE_THRESHOLD: score >= 6/10, or verdict contains "accept", "sufficient", "ready for submission"
-- REVIEW_DOC: `AUTO_REVIEW.md` in project root (cumulative log)
+- REVIEW_DOC: `$RESEARCH_ROOT/AUTO_REVIEW.md` (cumulative log)
 
 ## LLM Configuration
 
@@ -84,7 +95,7 @@ curl -s "${LLM_BASE_URL}/chat/completions" \
 
 ## State Persistence (Compact Recovery)
 
-Persist state to `REVIEW_STATE.json` after each round:
+Persist state to `$RESEARCH_ROOT/refine-logs/REVIEW_STATE.json` after each round:
 
 ```json
 {
@@ -105,7 +116,7 @@ Persist state to `REVIEW_STATE.json` after each round:
 
 ### Initialization
 
-1. **Check `REVIEW_STATE.json`** for recovery
+1. **Check `$RESEARCH_ROOT/refine-logs/REVIEW_STATE.json`** for recovery
 2. Read project context and prior reviews
 3. Initialize round counter
 
@@ -165,7 +176,7 @@ Monitor remote experiments
 
 #### Phase E: Document Round
 
-Append to `AUTO_REVIEW.md`:
+Append to `$RESEARCH_ROOT/AUTO_REVIEW.md`:
 
 ```markdown
 ## Round N (timestamp)
@@ -194,11 +205,11 @@ Append to `AUTO_REVIEW.md`:
 - [continuing to round N+1 / stopping]
 ```
 
-**Write `REVIEW_STATE.json`** with current state.
+**Write `$RESEARCH_ROOT/refine-logs/REVIEW_STATE.json`** with current state.
 
 ### Termination
 
-1. Set `REVIEW_STATE.json` status to "completed"
+1. Set `$RESEARCH_ROOT/refine-logs/REVIEW_STATE.json` status to "completed"
 2. Write final summary
 
 ## Key Rules

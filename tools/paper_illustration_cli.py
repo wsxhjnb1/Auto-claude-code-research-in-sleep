@@ -13,11 +13,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ensure_paper_runtime import maybe_reexec_for_phase
-
-maybe_reexec_for_phase("illustration")
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+from ensure_paper_runtime import maybe_reexec_for_phase
+from aris_research_workspace import (
+    WorkspaceError,
+    default_workspace_root,
+    extract_workspace_reference,
+    resolve_artifact_path,
+)
+
+maybe_reexec_for_phase("illustration", work_dir=REPO_ROOT)
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
@@ -106,18 +112,62 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-critic-rounds", type=int, default=3)
     parser.add_argument("--target-score", type=int, default=9)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--workspace-root")
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    work_dir = Path.cwd()
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    explicit_workspace = extract_workspace_reference(
+        " ".join(
+            [
+                args.paper_plan,
+                args.narrative_report,
+                args.auto_review,
+                args.output_dir,
+                args.manifest,
+                args.latex_includes,
+                args.reference_dir or "",
+            ]
+        ),
+        repo_root=REPO_ROOT,
+    )
+    try:
+        workspace_root = default_workspace_root(
+            explicit_workspace_root=args.workspace_root
+            or (explicit_workspace.relative_path if explicit_workspace is not None else None),
+            repo_root=REPO_ROOT,
+        )
+    except WorkspaceError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
 
-    paper_plan = _read_optional(Path(args.paper_plan))
-    narrative_report = _read_optional(Path(args.narrative_report))
-    auto_review = _read_optional(Path(args.auto_review))
+    work_dir = workspace_root
+    output_dir_arg = Path(args.output_dir)
+    output_dir = resolve_artifact_path(output_dir_arg, workspace_root=workspace_root, repo_root=REPO_ROOT)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    paper_plan_path = resolve_artifact_path(args.paper_plan, workspace_root=workspace_root, repo_root=REPO_ROOT)
+    narrative_report_path = resolve_artifact_path(
+        args.narrative_report,
+        workspace_root=workspace_root,
+        repo_root=REPO_ROOT,
+    )
+    auto_review_path = resolve_artifact_path(args.auto_review, workspace_root=workspace_root, repo_root=REPO_ROOT)
+    manifest_path = resolve_artifact_path(args.manifest, workspace_root=workspace_root, repo_root=REPO_ROOT)
+    latex_includes_path = resolve_artifact_path(
+        args.latex_includes,
+        workspace_root=workspace_root,
+        repo_root=REPO_ROOT,
+    )
+    reference_dir = (
+        resolve_artifact_path(args.reference_dir, workspace_root=workspace_root, repo_root=REPO_ROOT)
+        if args.reference_dir
+        else None
+    )
+
+    paper_plan = _read_optional(paper_plan_path)
+    narrative_report = _read_optional(narrative_report_path)
+    auto_review = _read_optional(auto_review_path)
 
     figure_specs = _select_figure_specs(
         paper_plan=paper_plan,
@@ -131,7 +181,7 @@ def main() -> int:
     config_kwargs: dict[str, Any] = {
         "work_dir": work_dir,
         "output_dir": output_dir,
-        "reference_dir": Path(args.reference_dir) if args.reference_dir else None,
+        "reference_dir": reference_dir,
         "retrieval_setting": args.retrieval_setting,
         "max_critic_rounds": args.max_critic_rounds,
         "target_score": args.target_score,
@@ -156,6 +206,7 @@ def main() -> int:
             spec=spec,
             config=config,
             output_dir=output_dir,
+            display_output_dir=output_dir_arg,
             narrative_report=narrative_report,
             auto_review=auto_review,
             paper_plan=paper_plan,
@@ -176,8 +227,8 @@ def main() -> int:
         }:
             blocked = True
 
-    _write_manifest(Path(args.manifest), manifest_entries, backend=config.normalized_backend)
-    _update_latex_includes(Path(args.latex_includes), manifest_entries)
+    _write_manifest(manifest_path, manifest_entries, backend=config.normalized_backend)
+    _update_latex_includes(latex_includes_path, manifest_entries)
 
     if blocked and not args.dry_run:
         return 2
@@ -189,6 +240,7 @@ def _build_manifest_entry(
     spec: FigureSpec,
     config: IllustrationConfig,
     output_dir: Path,
+    display_output_dir: Path,
     narrative_report: str,
     auto_review: str,
     paper_plan: str,
@@ -201,6 +253,7 @@ def _build_manifest_entry(
     dry_run: bool,
 ) -> dict[str, Any]:
     figure_path = output_dir / f"{spec.normalized_id}_final.png"
+    display_figure_path = display_output_dir / f"{spec.normalized_id}_final.png"
     latex_label = f"fig:{spec.normalized_id}"
     base_entry = {
         "figure_id": spec.figure_id,
@@ -213,7 +266,7 @@ def _build_manifest_entry(
             "auto_review": "AUTO_REVIEW.md" if auto_review else None,
         },
         "latex_label": latex_label,
-        "output_path": str(figure_path),
+        "output_path": str(display_figure_path),
         "caption": spec.caption,
     }
 

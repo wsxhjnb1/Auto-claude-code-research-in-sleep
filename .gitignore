@@ -16,10 +16,15 @@ __pycache__/
 
 # Environment
 .env
+.venv
 
 # Repo-local vendor skills
 vendor-skills/*
 !vendor-skills/INSTALLED_SKILLS.json
+
+# Research workspace runtime metadata
+research/ACTIVE_RESEARCH.json
+research/*/WORKSPACE.json
 
 # Upstream sync runtime artifacts
 refine-logs/UPSTREAM_SYNC_STATE.json

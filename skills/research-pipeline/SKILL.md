@@ -17,6 +17,22 @@ Run this workflow from the root of a checked-out ARIS repo or fork. It depends o
 
 When Claude Code is started from the ARIS repo root, the project-level wrapper at `.claude/skills/research-pipeline/SKILL.md` exposes `/research-pipeline`. The canonical implementation remains this file.
 
+## Research Workspace
+
+Resolve the active research workspace before Stage 1:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage research-pipeline --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Behavior:
+
+- The first main-entry call creates `research/<slug>/` and marks it active in `research/ACTIVE_RESEARCH.json`.
+- Reusing the same research name reuses the same workspace, which keeps experiment resume state and paper artifacts together.
+- Later stages default to the active research workspace. To switch, include `research name: <human-readable-name>` inline.
+- Repo-level runtime stays at the repo root: `.venv/`, `.claude/`, `memory/`, `vendor-skills/`, and runtime/sync state under `refine-logs/`.
+
 ## Constants
 
 - **AUTO_PROCEED = true**
@@ -83,10 +99,10 @@ Use them to avoid repeating failed directions, reuse proven experiment strategie
 
 Output:
 
-- `IDEA_REPORT.md`
-- `refine-logs/FINAL_PROPOSAL.md`
-- `refine-logs/EXPERIMENT_PLAN.md`
-- `refine-logs/EXPERIMENT_TRACKER.md`
+- `$RESEARCH_ROOT/IDEA_REPORT.md`
+- `$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md`
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md`
 
 After Workflow 1 converges, run a short reflection and refresh repo-local ideation memory:
 
@@ -102,9 +118,9 @@ After Workflow 1 converges, run a short reflection and refresh repo-local ideati
 
 Output:
 
-- `refine-logs/EXPERIMENT_RESULTS.md`
-- `refine-logs/EXPERIMENT_RUNTIME.json`
-- `refine-logs/EXPERIMENT_DEBATE_LOG.md`
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RESULTS.md`
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_LOG.md`
 
 If the user asks to redesign experiments midstream, re-read `memory/experiment-memory.md` before re-entering `/experiment-bridge`.
 
@@ -122,7 +138,7 @@ After Workflow 1.5 reaches a stable result snapshot or a design pivot, update re
 
 Output:
 
-- `AUTO_REVIEW.md`
+- `$RESEARCH_ROOT/AUTO_REVIEW.md`
 
 This is the canonical review artifact. Do not use model-specific review file names.
 
@@ -134,10 +150,11 @@ After each major review-loop convergence or reviewer-forced plan change, refresh
 
 ### Stage 4: Narrative Synthesis
 
-If `NARRATIVE_REPORT.md` is missing, synthesize it from the Workflow 1.5 / 2 artifacts:
+If `$RESEARCH_ROOT/NARRATIVE_REPORT.md` is missing, synthesize it from the Workflow 1.5 / 2 artifacts:
 
 ```bash
 python3 tools/synthesize_narrative_report.py \
+  --workspace-root "$RESEARCH_ROOT" \
   --proposal refine-logs/FINAL_PROPOSAL.md \
   --plan refine-logs/EXPERIMENT_PLAN.md \
   --results refine-logs/EXPERIMENT_RESULTS.md \
@@ -157,9 +174,9 @@ Workflow 3 inherits the automatic bootstrap from `paper-writing`; it now creates
 
 Output:
 
-- `paper/main.pdf`
-- `paper/PAPER_IMPROVEMENT_LOG.md`
-- `figures/illustration_manifest.json` when AI illustrations are used
+- `$RESEARCH_ROOT/paper/main.pdf`
+- `$RESEARCH_ROOT/paper/PAPER_IMPROVEMENT_LOG.md`
+- `$RESEARCH_ROOT/figures/illustration_manifest.json` when AI illustrations are used
 
 ### Stage 6: Final Summary
 
@@ -169,16 +186,17 @@ Write a final report that includes:
 - experiment completion and reviewer score trajectory
 - whether the narrative was synthesized or user-provided
 - how figures were produced (`paper-figure`, `paper-illustration`, or manual blockers)
-- whether `paper/main.pdf` compiled successfully
+- whether `$RESEARCH_ROOT/paper/main.pdf` compiled successfully
 
 ## Key Rules
 
 - Read repo-local memory before starting and before any experiment redesign.
 - Before entering the main workflow, try `tools/aris_upstream_sync.py sync` and keep the repo on a single long-lived `main` branch.
-- Keep `vendor-skills/` repo-local. Do not publish or copy vendor skills into external global skill directories.
+- Resolve `RESEARCH_ROOT` first and keep research artifacts under `research/<slug>/`.
+- Keep `vendor-skills/` repo-local.
 - Treat reflection + memory update as part of the pipeline contract, not an optional note-taking step.
 - Use `/experiment-bridge`, not an ad hoc implementation step.
-- `AUTO_REVIEW.md` is canonical.
+- `$RESEARCH_ROOT/AUTO_REVIEW.md` is canonical.
 - The pipeline is not done at Workflow 2 anymore; it must continue to Workflow 3 unless blocked.
 - Keep public interfaces model-agnostic: `illustration: ai`, not provider/model-specific values.
 - Only external media should block paper figures; architecture and hero figures should go through AI illustration first.

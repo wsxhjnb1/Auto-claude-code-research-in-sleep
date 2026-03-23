@@ -7,6 +7,17 @@ description: "Generate publication-quality AI illustrations for academic papers 
 
 Generate publication-quality academic illustrations for: **$ARGUMENTS**
 
+## Research Workspace
+
+Resolve the active research workspace before invoking the CLI:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage paper-illustration --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Treat `PAPER_PLAN.md`, `NARRATIVE_REPORT.md`, `AUTO_REVIEW.md`, `figures/`, and `paper/` as relative to `$RESEARCH_ROOT` unless the user explicitly supplies an absolute path or a `research/...` path.
+
 This skill is backed by real runtime code:
 
 ```bash
@@ -55,7 +66,7 @@ The vendored runtime is a selective PaperBanana import plus a browser-backed Gem
 
 ## Inputs
 
-The CLI reads as much context as exists:
+The CLI reads as much context as exists in the active research workspace:
 
 1. `PAPER_PLAN.md`
 2. `NARRATIVE_REPORT.md`
@@ -88,6 +99,7 @@ python3 tools/ensure_paper_runtime.py --phase illustration
 
 ```bash
 python3 tools/paper_illustration_cli.py \
+  --workspace-root "$RESEARCH_ROOT" \
   --paper-plan PAPER_PLAN.md \
   --narrative-report NARRATIVE_REPORT.md \
   --auto-review AUTO_REVIEW.md \
@@ -103,9 +115,9 @@ The CLI will:
 4. reset each render into a fresh temporary chat, explicitly enable Gemini's image tool, wrap the browser prompt in an image-only instruction, and auto-retry if stale chat context leaks in
 5. if temporary-chat retries still surface stale artifacts or no reliable image path, escalate that retry to `new_chat` while preserving the dedicated profile
 6. use the Retriever → Planner → Stylist → Visualizer → Critic loop only when `ILLUSTRATION_BACKEND=api`
-7. write final images to `figures/ai_generated/`
-8. write `figures/illustration_manifest.json`
-9. append/update the illustration snippets inside `figures/latex_includes.tex`
+7. write final images to `$RESEARCH_ROOT/figures/ai_generated/`
+8. write `$RESEARCH_ROOT/figures/illustration_manifest.json`
+9. append/update the illustration snippets inside `$RESEARCH_ROOT/figures/latex_includes.tex`
 
 Shared MCP bridge:
 
@@ -172,9 +184,9 @@ The dedicated Gemini profile is automation-owned: duplicate blank tabs, stale Ge
 
 ## Outputs
 
-- `figures/ai_generated/*.png`
-- `figures/illustration_manifest.json`
-- `figures/latex_includes.tex`
+- `$RESEARCH_ROOT/figures/ai_generated/*.png`
+- `$RESEARCH_ROOT/figures/illustration_manifest.json`
+- `$RESEARCH_ROOT/figures/latex_includes.tex`
 
 ## Key Rules
 

@@ -146,7 +146,7 @@ Antigravity uses `GEMINI.md` (equivalent to Claude Code's `CLAUDE.md`) for proje
 
 - Topic: [your research topic]
 - Target venue: ICLR/NeurIPS/ICML
-- Key files: NARRATIVE_REPORT.md, IDEA_REPORT.md
+- Key files: `research/<slug>/NARRATIVE_REPORT.md`, `research/<slug>/IDEA_REPORT.md`
 ```
 
 ## 4. How to Invoke Skills
@@ -197,7 +197,7 @@ Follow these sub-skills in sequence:
 5. Read and execute skills/research-refine-pipeline/SKILL.md — refine method + plan experiments
 ```
 
-> **Tip:** If the context gets long, run each phase as a separate agent task in Antigravity's Manager View. Pass results via files (e.g., `IDEA_REPORT.md`, `refine-logs/FINAL_PROPOSAL.md`).
+> **Tip:** If the context gets long, run each phase as a separate agent task in Antigravity's Manager View. Pass results via files inside the active research workspace (e.g., `research/<slug>/IDEA_REPORT.md`, `research/<slug>/refine-logs/FINAL_PROPOSAL.md`).
 
 ### Workflow 1.5: Experiment Bridge
 
@@ -240,7 +240,7 @@ Use MCP tool mcp__codex__codex for external review.
 **Antigravity equivalent:**
 ```
 Read and execute skills/paper-writing/SKILL.md.
-Input: NARRATIVE_REPORT.md in project root.
+Input: `research/<slug>/NARRATIVE_REPORT.md` in the active research workspace.
 
 Sub-skills to execute in sequence:
 1. Read and execute skills/paper-plan/SKILL.md — outline + claims-evidence matrix
@@ -256,14 +256,14 @@ For the full pipeline (`/research-pipeline`), leverage Antigravity's **multi-age
 
 | Stage | What to do | Output files |
 |-------|-----------|-------------|
-| 1 | Idea Discovery: `skills/idea-discovery/SKILL.md` + your direction | `IDEA_REPORT.md`, `refine-logs/FINAL_PROPOSAL.md`, `refine-logs/EXPERIMENT_PLAN.md` |
-| 2 | Experiment Bridge: `skills/experiment-bridge/SKILL.md` | Experiment scripts, results |
-| 3 | Auto Review Loop: `skills/auto-review-loop/SKILL.md` | `AUTO_REVIEW.md` |
-| 4 | Paper Writing: `skills/paper-writing/SKILL.md` + `NARRATIVE_REPORT.md` (optional if Workflow 2 artifacts already exist) | `paper/` directory |
+| 1 | Idea Discovery: `skills/idea-discovery/SKILL.md` + your direction | `research/<slug>/IDEA_REPORT.md`, `research/<slug>/refine-logs/FINAL_PROPOSAL.md`, `research/<slug>/refine-logs/EXPERIMENT_PLAN.md` |
+| 2 | Experiment Bridge: `skills/experiment-bridge/SKILL.md` | experiment scripts, `research/<slug>/results/`, and `research/<slug>/refine-logs/EXPERIMENT_RUNTIME.json` |
+| 3 | Auto Review Loop: `skills/auto-review-loop/SKILL.md` | `research/<slug>/AUTO_REVIEW.md` |
+| 4 | Paper Writing: `skills/paper-writing/SKILL.md` + `research/<slug>/NARRATIVE_REPORT.md` (optional if Workflow 2 artifacts already exist) | `research/<slug>/paper/` directory |
 
 Each stage reads the previous stage's output files, so context carries forward across agent sessions.
 
-> **Note:** Stage 4 works best with a `NARRATIVE_REPORT.md`, but the updated `paper-writing` pipeline can synthesize it from `AUTO_REVIEW.md`, proposal/experiment artifacts, and runtime evidence if the file is missing — see [NARRATIVE_REPORT_EXAMPLE.md](NARRATIVE_REPORT_EXAMPLE.md) for the target structure.
+> **Note:** Stage 4 works best with a `research/<slug>/NARRATIVE_REPORT.md`, but the updated `paper-writing` pipeline can synthesize it from `research/<slug>/AUTO_REVIEW.md`, proposal/experiment artifacts, and runtime evidence if the file is missing — see [NARRATIVE_REPORT_EXAMPLE.md](NARRATIVE_REPORT_EXAMPLE.md) for the target structure.
 
 ## 6. MCP Tool Calls
 
@@ -283,18 +283,18 @@ ARIS workflows persist state to files for crash recovery. These work identically
 
 | File | Purpose | Written by |
 |------|---------|----|
-| `REVIEW_STATE.json` | Auto-review loop progress | `auto-review-loop` |
-| `AUTO_REVIEW.md` | Cumulative review log | `auto-review-loop` |
-| `IDEA_REPORT.md` | Ranked ideas with pilot results | `idea-discovery` |
-| `PAPER_PLAN.md` | Paper outline + claims-evidence matrix | `paper-plan` |
-| `refine-logs/FINAL_PROPOSAL.md` | Refined method proposal | `research-refine` |
-| `refine-logs/EXPERIMENT_PLAN.md` | Experiment roadmap | `experiment-plan` |
-| `refine-logs/EXPERIMENT_TRACKER.md` | Run-by-run execution status | `experiment-plan` |
+| `research/<slug>/refine-logs/REVIEW_STATE.json` | Auto-review loop progress | `auto-review-loop` |
+| `research/<slug>/AUTO_REVIEW.md` | Cumulative review log | `auto-review-loop` |
+| `research/<slug>/IDEA_REPORT.md` | Ranked ideas with pilot results | `idea-discovery` |
+| `research/<slug>/PAPER_PLAN.md` | Paper outline + claims-evidence matrix | `paper-plan` |
+| `research/<slug>/refine-logs/FINAL_PROPOSAL.md` | Refined method proposal | `research-refine` |
+| `research/<slug>/refine-logs/EXPERIMENT_PLAN.md` | Experiment roadmap | `experiment-plan` |
+| `research/<slug>/refine-logs/EXPERIMENT_TRACKER.md` | Run-by-run execution status | `experiment-plan` |
 
 If an Antigravity agent session ends mid-workflow, start a new session and reference the state file:
 
 ```
-Read skills/auto-review-loop/SKILL.md, then read REVIEW_STATE.json and AUTO_REVIEW.md.
+Read skills/auto-review-loop/SKILL.md, then read `research/<slug>/refine-logs/REVIEW_STATE.json` and `research/<slug>/AUTO_REVIEW.md`.
 Resume the auto review loop from the saved state.
 ```
 
@@ -338,9 +338,9 @@ Antigravity includes a built-in browser. Useful for:
 
 ### Artifact System
 Antigravity's artifact system (implementation plans, walkthroughs) maps naturally to ARIS outputs:
-- `IDEA_REPORT.md` → implementation plan artifact
-- `AUTO_REVIEW.md` → walkthrough artifact
-- `PAPER_PLAN.md` → implementation plan artifact
+- `research/<slug>/IDEA_REPORT.md` → implementation plan artifact
+- `research/<slug>/AUTO_REVIEW.md` → walkthrough artifact
+- `research/<slug>/PAPER_PLAN.md` → implementation plan artifact
 
 ### Knowledge Persistence
 Antigravity's knowledge system retains context across conversations:
@@ -378,7 +378,7 @@ Read skills/auto-review-loop/SKILL.md and run the auto review loop.
 Topic: "your paper topic".
 
 # Paper writing
-Read skills/paper-writing/SKILL.md and write the paper from NARRATIVE_REPORT.md.
+Read skills/paper-writing/SKILL.md and write the paper from `research/<slug>/NARRATIVE_REPORT.md`.
 
 # Run experiment
 Read skills/run-experiment/SKILL.md and GEMINI.md.

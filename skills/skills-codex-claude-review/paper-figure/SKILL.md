@@ -9,6 +9,17 @@ description: "Generate publication-quality figures and tables from experiment re
 
 Generate all figures and tables for a paper based on: **$ARGUMENTS**
 
+## Research Workspace
+
+Resolve the active research workspace before reading data or writing assets:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage paper-figure --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Treat figure inputs and outputs as relative to `$RESEARCH_ROOT`. Repo-level runtime bootstrap still happens from the repo root.
+
 ## Scope: What This Skill Can and Cannot Do
 
 | Category | Can auto-generate? | Examples |
@@ -29,13 +40,13 @@ Generate all figures and tables for a paper based on: **$ARGUMENTS**
 - **FORMAT = `pdf`** — Output format. Options: `pdf` (vector, best for LaTeX), `png` (raster fallback)
 - **COLOR_PALETTE = `tab10`** — Default matplotlib color cycle. Options: `tab10`, `Set2`, `colorblind` (deuteranopia-safe)
 - **FONT_SIZE = 10** — Base font size (matches typical conference body text)
-- **FIG_DIR = `figures/`** — Output directory for generated figures
+- **FIG_DIR = `figures/` inside the active research workspace** — Output directory for generated figures
 - **REVIEWER_MODEL = `claude-review`** — Claude reviewer invoked through the local `claude-review` MCP bridge. Set `CLAUDE_REVIEW_MODEL` if you need a specific Claude model override.
 
 ## Inputs
 
 1. **PAPER_PLAN.md** — figure plan table (from `/paper-plan`)
-2. **Experiment data** — JSON files, CSV files, or screen logs in `figures/` or project root
+2. **Experiment data** — JSON files, CSV files, or screen logs in `figures/` or the active research workspace
 3. **Existing figures** — any manually created figures to preserve
 
 If no PAPER_PLAN.md exists, scan for data files and ask the user which figures to generate.
@@ -176,7 +187,7 @@ Method & Rate & Depends on $D$? & Multi-modal? \\
 
 **Architecture/pipeline diagrams**:
 - Do **not** default these to manual creation.
-- Delegate them to `/paper-illustration`, which writes `figures/ai_generated/` and `figures/illustration_manifest.json`.
+- Delegate them to `/paper-illustration`, which writes `$RESEARCH_ROOT/figures/ai_generated/` and `$RESEARCH_ROOT/figures/illustration_manifest.json`.
 - Only flag them as manual if they depend on screenshots, qualitative grids, or other external assets.
 
 ### Step 5: Run All Scripts
@@ -204,7 +215,7 @@ For each figure, output the LaTeX code to include it:
 \end{figure}
 ```
 
-Save all snippets to `figures/latex_includes.tex` for easy copy-paste into the paper. Preserve any illustration snippets that were already appended by `/paper-illustration`.
+Save all snippets to `$RESEARCH_ROOT/figures/latex_includes.tex` for easy copy-paste into the paper. Preserve any illustration snippets that were already appended by `/paper-illustration`.
 
 ### Step 7: Figure Quality Review with REVIEWER_MODEL
 

@@ -11,7 +11,7 @@ ARIS 工作流可能持续数小时（idea discovery、auto-review loop、overni
 1. **上下文压缩（Context Compaction）** — 当上下文窗口满了，Claude Code 自动压缩之前的消息。压缩后 LLM 只有压缩摘要，可能忘记当前在哪个 stage、哪些实验在跑、下一步该做什么。
 2. **主动开新会话** — 当上下文使用超过约 50% 时，LLM 能力会明显下降。有经验的用户会主动开新 session 以恢复模型满状态能力，而不是等自动压缩。这意味着 LLM 必须从磁盘文件重建项目状态。
 
-ARIS 已经将部分状态持久化到文件（`REVIEW_STATE.json`、`AUTO_REVIEW.md`），但**没有系统性机制确保 LLM 在恢复时去读这些文件**。压缩后，它经常忘记。
+ARIS 已经会把部分状态持久化到 active research 工作区里的文件（例如 `research/<slug>/refine-logs/REVIEW_STATE.json`、`research/<slug>/AUTO_REVIEW.md`），但**没有系统性机制确保 LLM 在恢复时去读这些文件**。压缩后，它经常忘记。
 
 ## 核心方案：Pipeline Status
 
@@ -172,11 +172,15 @@ if grep -q "training_status:.*running" "$PROJECT_DIR/CLAUDE.md" 2>/dev/null; the
   OUTPUT="$OUTPUT\n\n[session-restore] Active training detected — check remote status and rebuild monitoring."
 fi
 
-# 4. Check for REVIEW_STATE.json (auto-review-loop recovery)
-if [ -f "$PROJECT_DIR/REVIEW_STATE.json" ]; then
-  RS_STATUS=$(python3 -c "import json; d=json.load(open('$PROJECT_DIR/REVIEW_STATE.json')); print(d.get('status',''))" 2>/dev/null)
-  if [ "$RS_STATUS" = "in_progress" ]; then
-    OUTPUT="$OUTPUT\n\n[session-restore] REVIEW_STATE.json found (in_progress) — auto-review-loop can resume."
+# 4. 检查 active research 工作区里的 REVIEW_STATE.json（auto-review-loop 恢复）
+ACTIVE_RESEARCH="$PROJECT_DIR/research/ACTIVE_RESEARCH.json"
+if [ -f "$ACTIVE_RESEARCH" ]; then
+  REVIEW_STATE=$(python3 -c "import json; from pathlib import Path; data=json.load(open('$ACTIVE_RESEARCH')); print(Path(data['path']) / 'refine-logs' / 'REVIEW_STATE.json')" 2>/dev/null)
+  if [ -n "$REVIEW_STATE" ] && [ -f "$REVIEW_STATE" ]; then
+    RS_STATUS=$(python3 -c "import json; d=json.load(open('$REVIEW_STATE')); print(d.get('status',''))" 2>/dev/null)
+    if [ "$RS_STATUS" = "in_progress" ]; then
+      OUTPUT="$OUTPUT\n\n[session-restore] Active research REVIEW_STATE.json found (in_progress) — auto-review-loop can resume."
+    fi
   fi
 fi
 
@@ -256,7 +260,7 @@ echo "[pre-compact] Ensure these are up to date:"
 echo "  1. CLAUDE.md Pipeline Status (stage, idea, active_tasks, next)"
 echo "  2. docs/research_contract.md (current idea context and results)"
 echo "  3. EXPERIMENT_TRACKER.md (any unreported results)"
-echo "  4. REVIEW_STATE.json (if running auto-review-loop)"
+echo "  4. research/<slug>/refine-logs/REVIEW_STATE.json（如果在跑 auto-review-loop）"
 echo "[pre-compact] After compaction, read CLAUDE.md and docs/research_contract.md to recover."
 HOOKEOF
 chmod +x ~/.claude/hooks/pre-compact-remind.sh

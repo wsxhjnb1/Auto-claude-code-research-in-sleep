@@ -13,6 +13,17 @@ Generate publishable research ideas for: $ARGUMENTS
 
 Given a broad research direction from the user, systematically generate, validate, and rank concrete research ideas. This skill composes with `/research-lit`, `/novelty-check`, and `/research-review` to form a complete idea discovery pipeline.
 
+## Research Workspace
+
+Resolve the active research workspace before reading or writing research artifacts:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage idea-creator --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Treat idea reports, pilot outputs, and any research-local notes as relative to `$RESEARCH_ROOT`.
+
 ## Constants
 
 - **PILOT_MAX_HOURS = 2** — Skip any pilot estimated to take > 2 hours per GPU. Flag as "needs manual pilot".
@@ -29,7 +40,7 @@ Given a broad research direction from the user, systematically generate, validat
 
 Map the research area to understand what exists and where the gaps are.
 
-1. **Scan local paper library first**: Check `papers/` and `literature/` in the project directory for existing PDFs. Read first 3 pages of relevant papers to build a baseline understanding before searching online. This avoids re-discovering what the user already knows.
+1. **Scan local paper library first**: Check `$RESEARCH_ROOT/papers/` and `$RESEARCH_ROOT/literature/` for existing PDFs. Read first 3 pages of relevant papers to build a baseline understanding before searching online. This avoids re-discovering what the user already knows.
 
 2. **Search recent literature** using WebSearch:
    - Top venues in the last 2 years (NeurIPS, ICML, ICLR, ACL, EMNLP, etc.)
@@ -156,7 +167,7 @@ Note: Skip this phase if the ideas are purely theoretical or if no GPU is availa
 
 ### Phase 6: Output — Ranked Idea Report
 
-Write a structured report to `IDEA_REPORT.md` in the project root:
+Write a structured report to `$RESEARCH_ROOT/IDEA_REPORT.md`:
 
 ```markdown
 # Research Idea Report

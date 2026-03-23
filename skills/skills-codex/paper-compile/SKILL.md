@@ -7,12 +7,24 @@ description: "Compile LaTeX paper to PDF, fix errors, and verify output. Use whe
 
 Compile the LaTeX paper and fix any issues: **$ARGUMENTS**
 
+## Research Workspace
+
+Resolve the active research workspace before compilation:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage paper-compile --arguments "$ARGUMENTS" --print-path)"
+PAPER_DIR="${ARGUMENTS:-$RESEARCH_ROOT/paper}"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+If the user does not pass an explicit paper path, compile `$RESEARCH_ROOT/paper/`.
+
 ## Constants
 
 - **COMPILER = `latexmk`** — LaTeX build tool. Handles multi-pass compilation automatically.
 - **ENGINE = `pdflatex`** — LaTeX engine. Options: `pdflatex` (default), `xelatex` (for CJK/custom fonts), `lualatex`.
 - **MAX_COMPILE_ATTEMPTS = 3** — Maximum attempts to fix errors and recompile.
-- **PAPER_DIR = `paper/`** — Directory containing LaTeX source files.
+- **PAPER_DIR = `$RESEARCH_ROOT/paper/`** — Directory containing LaTeX source files.
 - **MAX_PAGES** — Main body page limit (to end of Conclusion, excluding references & appendix). ICLR=9, NeurIPS=9, ICML=8.
 
 ## Workflow
@@ -218,7 +230,7 @@ For conference submission, additional checks:
 ## Compilation Report
 
 - **Status**: SUCCESS / FAILED
-- **PDF**: paper/main.pdf
+- **PDF**: `$RESEARCH_ROOT/paper/main.pdf`
 - **Pages**: X (main body to Conclusion) + Y (references) + Z (appendix)
 - **Within page limit**: YES/NO (MAX_PAGES = N)
 - **Errors fixed**: [list of auto-fixed issues]

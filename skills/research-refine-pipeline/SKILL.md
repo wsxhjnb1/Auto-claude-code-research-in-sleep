@@ -27,6 +27,17 @@ For stage-specific detail, read these sibling skills only when needed:
 - `../research-refine/SKILL.md`
 - `../experiment-plan/SKILL.md`
 
+## Research Workspace
+
+Resolve the research workspace before Phase 0:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage research-refine-pipeline --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+This pipeline writes method-refinement and experiment-planning artifacts under `$RESEARCH_ROOT/refine-logs/` and keeps the workspace active for `/experiment-bridge`.
+
 ## Core Rule
 
 Do not plan a large experiment suite on top of an unstable method. First stabilize the thesis. Then turn the stable thesis into experiments.
@@ -44,19 +55,19 @@ The sync flow is origin-first: update local `main` from `origin/main` when possi
 
 ## Default Outputs
 
-- `refine-logs/FINAL_PROPOSAL.md`
-- `refine-logs/REVIEW_SUMMARY.md`
-- `refine-logs/REFINEMENT_REPORT.md`
-- `refine-logs/EXPERIMENT_PLAN.md`
-- `refine-logs/EXPERIMENT_TRACKER.md`
-- `refine-logs/PIPELINE_SUMMARY.md`
+- `$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`
+- `$RESEARCH_ROOT/refine-logs/REVIEW_SUMMARY.md`
+- `$RESEARCH_ROOT/refine-logs/REFINEMENT_REPORT.md`
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md`
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md`
+- `$RESEARCH_ROOT/refine-logs/PIPELINE_SUMMARY.md`
 
 ## Workflow
 
 ### Phase 0: Triage the Starting Point
 
 - Extract the problem, rough approach, constraints, resources, and target venue.
-- Check whether `refine-logs/FINAL_PROPOSAL.md` already exists and still matches the current request.
+- Check whether `$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md` already exists and still matches the current request.
 - If the proposal is missing, stale, or materially different from the current request, run the full `research-refine` stage.
 - If the proposal is already strong and aligned, reuse it and jump to experiment planning.
 - If in doubt, prefer re-running `research-refine` rather than planning experiments for the wrong method.
@@ -100,6 +111,8 @@ Run the `experiment-plan` workflow grounded in:
 - `refine-logs/REVIEW_SUMMARY.md`
 - `refine-logs/REFINEMENT_REPORT.md`
 
+Treat those paths as relative to `$RESEARCH_ROOT`.
+
 Ensure the experiment plan covers:
 
 - the main anchor result
@@ -110,7 +123,7 @@ Ensure the experiment plan covers:
 
 ### Phase 4: Integration Summary
 
-Write `refine-logs/PIPELINE_SUMMARY.md`:
+Write `$RESEARCH_ROOT/refine-logs/PIPELINE_SUMMARY.md`:
 
 ```markdown
 # Pipeline Summary
@@ -123,8 +136,8 @@ Write `refine-logs/PIPELINE_SUMMARY.md`:
 ## Final Deliverables
 - Proposal: `refine-logs/FINAL_PROPOSAL.md`
 - Review summary: `refine-logs/REVIEW_SUMMARY.md`
-- Experiment plan: `refine-logs/EXPERIMENT_PLAN.md`
-- Experiment tracker: `refine-logs/EXPERIMENT_TRACKER.md`
+- Experiment plan: `$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md`
+- Experiment tracker: `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md`
 
 ## Contribution Snapshot
 - Dominant contribution:
@@ -154,14 +167,14 @@ Write `refine-logs/PIPELINE_SUMMARY.md`:
 Pipeline complete.
 
 Method output:
-- refine-logs/FINAL_PROPOSAL.md
+- $RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md
 
 Experiment output:
-- refine-logs/EXPERIMENT_PLAN.md
-- refine-logs/EXPERIMENT_TRACKER.md
+- $RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md
+- $RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md
 
 Pipeline summary:
-- refine-logs/PIPELINE_SUMMARY.md
+- $RESEARCH_ROOT/refine-logs/PIPELINE_SUMMARY.md
 
 Best next step:
 - /experiment-bridge

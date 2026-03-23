@@ -30,6 +30,17 @@ This skill turns validated research ideas into a structured, reviewer-ready gran
 
 Grant proposals argue for **future work** (feasibility + potential), not completed work (results + claims). This skill handles the unique requirements of grant writing: narrative arc design, reviewer-facing structure, budget justification, timeline planning, and agency-specific formatting.
 
+## Research Workspace
+
+Resolve the active research workspace before collecting artifacts or writing proposal files:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage grant-proposal --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Grant artifacts for a specific research direction should live under that workspace, typically `$RESEARCH_ROOT/grant-proposal/`.
+
 ## Constants
 
 - **GRANT_TYPE = `KAKENHI`** — Default grant type. Supported: `KAKENHI`, `NSF`, `NSFC`, `ERC`, `DFG`, `SNSF`, `ARC`, `NWO`, `GENERIC`. Override via argument (e.g., `/grant-proposal "topic — NSF"`).
@@ -37,7 +48,7 @@ Grant proposals argue for **future work** (feasibility + potential), not complet
 - **REVIEWER_MODEL = `gpt-5.4`** — Model used via Codex MCP for proposal review. Must be an OpenAI model (e.g., `gpt-5.4`, `o3`, `gpt-4o`).
 - **OUTPUT_FORMAT = `markdown`** — Output format. Supported: `markdown`, `latex`. LaTeX uses grant-specific templates when available.
 - **MAX_REVIEW_ROUNDS = 2** — Maximum external review-revise cycles before finalizing.
-- **OUTPUT_DIR = `grant-proposal/`** — Directory for generated proposal files.
+- **OUTPUT_DIR = `$RESEARCH_ROOT/grant-proposal/`** — Directory for generated proposal files.
 - **LANGUAGE = `auto`** — Output language. Auto-detected from grant type: KAKENHI→Japanese, NSF→English, NSFC→Chinese, ERC→English, DFG→English (or German), SNSF→English, ARC→English, NWO→English. Override explicitly if needed.
 - **AUTO_PROCEED = false** — At each checkpoint, **always wait for explicit user confirmation** before proceeding. Grant proposals require PI-specific judgment at every stage. Set `true` only if user explicitly requests fully autonomous mode.
 
@@ -127,7 +138,7 @@ For any grant not listed above. User provides section names, page limits, and re
 
 ## State Persistence (Compact Recovery)
 
-Grant proposal drafting is a long task that may trigger context compaction. Persist state to `grant-proposal/GRANT_STATE.json` after each phase:
+Grant proposal drafting is a long task that may trigger context compaction. Persist state to `$RESEARCH_ROOT/grant-proposal/GRANT_STATE.json` after each phase:
 
 ```json
 {
@@ -161,22 +172,22 @@ Parse `$ARGUMENTS` to extract:
 3. **Grant sub-type** — detect from keywords (e.g., "Start-up", "若手", "青年", "CAREER", "优青", "海外优青")
 4. **Overrides** — output format, language, review rounds
 
-Then gather context from the project directory:
+Then gather context from the active research workspace:
 
-1. Read `IDEA_REPORT.md` if it exists (from `/idea-discovery`)
-2. Read `refine-logs/FINAL_PROPOSAL.md` if it exists (from `/research-refine`)
-3. Read `refine-logs/EXPERIMENT_PLAN.md` if it exists (from `/experiment-plan`)
-4. Read `AUTO_REVIEW.md` if it exists (from `/auto-review-loop` — prior review feedback is gold for grants)
-5. Read `NARRATIVE_REPORT.md` or `STORY.md` if they exist
+1. Read `$RESEARCH_ROOT/IDEA_REPORT.md` if it exists (from `/idea-discovery`)
+2. Read `$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md` if it exists (from `/research-refine`)
+3. Read `$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md` if it exists (from `/experiment-plan`)
+4. Read `$RESEARCH_ROOT/AUTO_REVIEW.md` if it exists (from `/auto-review-loop` — prior review feedback is gold for grants)
+5. Read `$RESEARCH_ROOT/NARRATIVE_REPORT.md` or `$RESEARCH_ROOT/STORY.md` if they exist
 6. Read any existing literature notes or survey documents
 7. Scan for the user's publication list (e.g., `publications.md`, `cv.md`, `bio.md`, `CV.pdf`)
-8. Check for `grant-proposal/GRANT_STATE.json` (resume from prior interrupted run)
+8. Check for `$RESEARCH_ROOT/grant-proposal/GRANT_STATE.json` (resume from prior interrupted run)
 
 If insufficient context exists:
 - No research idea at all → suggest running `/idea-discovery` first
 - No literature survey → will invoke `/research-lit` inline in Phase 1
 - No publication list → leave PI qualification section with `[TODO: Add publications]` placeholders
-- Has AUTO_REVIEW.md → extract reviewer feedback and use it to strengthen the feasibility narrative
+- Has `$RESEARCH_ROOT/AUTO_REVIEW.md` → extract reviewer feedback and use it to strengthen the feasibility narrative
 
 ### Phase 1: Literature & Landscape Positioning
 
@@ -223,7 +234,7 @@ Options for the user:
 - Reply with **adjustments** (e.g., "focus more on X", "the gap should emphasize Y") → refine and re-present
 - Reply **"stop"** → end the skill, save current progress to `grant-proposal/DRAFT_NOTES.md`
 
-**State**: Write `GRANT_STATE.json` with `phase: 1` and the gap statement.
+**State**: Write `$RESEARCH_ROOT/grant-proposal/GRANT_STATE.json` with `phase: 1` and the gap statement.
 
 ### Phase 2: Narrative Structure & Aims Design
 
@@ -319,7 +330,7 @@ Options for the user:
 - Reply **"back"** → return to Phase 1 to adjust the gap/positioning
 - Reply **"stop"** → save current structure to `grant-proposal/DRAFT_NOTES.md`
 
-**State**: Write `GRANT_STATE.json` with `phase: 2`, aims summary, and Codex threadId.
+**State**: Write `$RESEARCH_ROOT/grant-proposal/GRANT_STATE.json` with `phase: 2`, aims summary, and Codex threadId.
 
 ### Phase 3: Section Drafting
 
@@ -327,7 +338,7 @@ Draft each section according to the grant type template. Write **complete prose*
 
 **What this does:**
 - Writes all required sections in the agency-specific language and tone
-- Pulls content from IDEA_REPORT.md, FINAL_PROPOSAL.md, and literature notes
+- Pulls content from `$RESEARCH_ROOT/IDEA_REPORT.md`, `$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`, and literature notes
 - Uses `/paper-illustration` for figure generation (if user requests)
 - Leaves `[TODO]` only for PI-specific information, `[AMOUNT]` for budget figures
 - Outputs `grant-proposal/GRANT_PROPOSAL.md`
@@ -404,7 +415,7 @@ Which should I generate? (e.g., "1 and 3", "all", "skip")
 
 #### For Each Section
 
-1. **Pull relevant content** from IDEA_REPORT.md, FINAL_PROPOSAL.md, literature notes
+1. **Pull relevant content** from `$RESEARCH_ROOT/IDEA_REPORT.md`, `$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`, and literature notes
 2. **Write complete prose** — no `[TODO]` except for PI-specific information
 3. **Include figure/table placeholders** where appropriate (e.g., `[Figure 1: System architecture]`)
 4. **Cite references properly** — use citation keys, will build bibliography later
@@ -497,7 +508,7 @@ Implement CRITICAL and MAJOR fixes. If MAX_REVIEW_ROUNDS > 1, re-submit for anot
 grant-proposal/
 ├── GRANT_PROPOSAL.md          # Complete proposal, all sections
 ├── GRANT_REVIEW.md            # Review history and reviewer feedback
-├── GRANT_STATE.json           # State persistence file
+├── GRANT_STATE.json           # State persistence file under $RESEARCH_ROOT/grant-proposal/
 ├── figures/                   # Generated diagrams (if any)
 └── references.bib             # Bibliography (if citations were used)
 ```

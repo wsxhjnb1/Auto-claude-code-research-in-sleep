@@ -11,6 +11,17 @@ End-to-end autonomous research workflow for: **$ARGUMENTS**
 
 Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/`.
 
+## Research Workspace
+
+Resolve and activate the research workspace first:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage research-pipeline --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+The first main-entry call creates `research/<slug>/` and records it in `research/ACTIVE_RESEARCH.json`. Later stages reuse the active research workspace by default. To switch, include `research name: <human-readable-name>` inline.
+
 ## Constants
 
 - **AUTO_PROCEED = true**
@@ -71,10 +82,10 @@ Use them to avoid repeating failed directions, reuse proven experiment strategie
 
 Output:
 
-- `IDEA_REPORT.md`
-- `refine-logs/FINAL_PROPOSAL.md`
-- `refine-logs/EXPERIMENT_PLAN.md`
-- `refine-logs/EXPERIMENT_TRACKER.md`
+- `$RESEARCH_ROOT/IDEA_REPORT.md`
+- `$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md`
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md`
 
 After Workflow 1 converges, run a short reflection and update repo-local ideation memory:
 
@@ -90,9 +101,9 @@ After Workflow 1 converges, run a short reflection and update repo-local ideatio
 
 Output:
 
-- `refine-logs/EXPERIMENT_RESULTS.md`
-- `refine-logs/EXPERIMENT_RUNTIME.json`
-- `refine-logs/EXPERIMENT_DEBATE_LOG.md`
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RESULTS.md`
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_LOG.md`
 
 If the user asks to redesign experiments midstream, re-read `memory/experiment-memory.md` before re-entering `/experiment-bridge`.
 
@@ -110,7 +121,7 @@ After Workflow 1.5 reaches a stable result snapshot or a design pivot, update re
 
 Output:
 
-- `AUTO_REVIEW.md`
+- `$RESEARCH_ROOT/AUTO_REVIEW.md`
 
 After each major review-loop convergence or reviewer-forced plan change, refresh repo-local memory:
 
@@ -120,10 +131,11 @@ After each major review-loop convergence or reviewer-forced plan change, refresh
 
 ### Stage 4: Narrative Synthesis
 
-If `NARRATIVE_REPORT.md` is missing:
+If `$RESEARCH_ROOT/NARRATIVE_REPORT.md` is missing:
 
 ```bash
 python3 tools/synthesize_narrative_report.py \
+  --workspace-root "$RESEARCH_ROOT" \
   --proposal refine-logs/FINAL_PROPOSAL.md \
   --plan refine-logs/EXPERIMENT_PLAN.md \
   --results refine-logs/EXPERIMENT_RESULTS.md \
@@ -143,9 +155,9 @@ Workflow 3 inherits the automatic bootstrap from `paper-writing`; first run crea
 
 Output:
 
-- `paper/main.pdf`
-- `paper/PAPER_IMPROVEMENT_LOG.md`
-- `figures/illustration_manifest.json` when AI illustrations are used
+- `$RESEARCH_ROOT/paper/main.pdf`
+- `$RESEARCH_ROOT/paper/PAPER_IMPROVEMENT_LOG.md`
+- `$RESEARCH_ROOT/figures/illustration_manifest.json` when AI illustrations are used
 
 ## Key Rules
 
@@ -154,7 +166,7 @@ Output:
 - Keep `vendor-skills/` repo-local. Do not publish or copy vendor skills into external global skill directories.
 - Treat reflection + memory update as part of the pipeline contract, not an optional note-taking step.
 - Use `/experiment-bridge`, not a free-form implementation step.
-- `AUTO_REVIEW.md` is canonical.
+- `$RESEARCH_ROOT/AUTO_REVIEW.md` is canonical.
 - The pipeline continues through Workflow 3 unless blocked.
 - Keep public interfaces model-agnostic: `illustration: ai`.
 - Only external media should block paper figures.

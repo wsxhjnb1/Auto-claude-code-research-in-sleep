@@ -3,7 +3,7 @@ name: "research-review"
 description: "Get a deep critical review of research from Claude via claude-review MCP. Use when user says \"review my research\", \"help me review\", \"get external review\", or wants critical feedback on research ideas, papers, or experimental results."
 ---
 
-> Override for Codex users who want **Claude Code**, not a second Codex agent, to act as the reviewer. Use it from a checked-out ARIS repo together with the repo-local `skills/skills-codex/` base package.
+> Override for Codex users who want **Claude Code**, not a second Codex agent, to act as the reviewer. Install this package **after** `skills/skills-codex/*`.
 
 # Research Review via `claude-review` MCP (high-rigor review)
 
@@ -15,17 +15,24 @@ Get a multi-round critical review of research work from an external LLM with max
 
 ## Context: $ARGUMENTS
 
-## Repo-Root Requirement
+## Research Workspace
 
-Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local skill trees and the local `claude-review` bridge path.
+Resolve the active research workspace before gathering context or writing review artifacts:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage research-review --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Save research review outputs under `$RESEARCH_ROOT/refine-logs/`.
 
 ## Prerequisites
 
-- Use the repo-local `skills/skills-codex/` tree as the base skill package.
-- Layer this repo-local `skills/skills-codex-claude-review/` override on top of that base package.
+- Install the base Codex-native skills first: copy `skills/skills-codex/*` into `~/.codex/skills/`.
+- Then install this overlay package: copy `skills/skills-codex-claude-review/*` into `~/.codex/skills/` and allow it to overwrite the same skill names.
 - Register the local reviewer bridge:
   ```bash
-  codex mcp add claude-review -- python3 /ABS/PATH/TO/Auto-claude-code-research-in-sleep/mcp-servers/claude-review/server.py
+  codex mcp add claude-review -- python3 ~/.codex/mcp-servers/claude-review/server.py
   ```
 - This gives Codex access to `mcp__claude-review__review_start`, `mcp__claude-review__review_reply_start`, and `mcp__claude-review__review_status`.
 
@@ -77,7 +84,7 @@ Stop iterating when:
 - The narrative structure is settled
 
 ### Step 5: Document Everything
-Save the full interaction and conclusions to a review document in the project root:
+Save the full interaction and conclusions to `$RESEARCH_ROOT/refine-logs/RESEARCH_REVIEW.md`:
 - Round-by-round summary of criticisms and responses
 - Final consensus on claims, narrative, and experiments
 - Claims matrix (what claims are allowed under each possible outcome)

@@ -11,6 +11,17 @@ Orchestrate a complete idea discovery workflow for: **$ARGUMENTS**
 
 Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, `vendor-skills/`, and `refine-logs/`.
 
+## Research Workspace
+
+Resolve and activate the research workspace first:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage idea-discovery --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+The first Workflow 1 call creates `research/<slug>/` and marks it active. Later stages reuse the active research unless you include `research name: <name>` inline.
+
 ## Overview
 
 This skill chains sub-skills into a single automated pipeline:
@@ -20,7 +31,7 @@ This skill chains sub-skills into a single automated pipeline:
   (survey)      (brainstorm)    (verify novel)    (critical feedback)  (refine method + plan experiments)
 ```
 
-Each phase builds on the previous one's output. The final deliverables are a validated `IDEA_REPORT.md` with ranked ideas, plus a refined proposal (`refine-logs/FINAL_PROPOSAL.md`) and experiment plan (`refine-logs/EXPERIMENT_PLAN.md`) for the top idea.
+Each phase builds on the previous one's output. The final deliverables are a validated `$RESEARCH_ROOT/IDEA_REPORT.md` with ranked ideas, plus a refined proposal (`$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`) and experiment plan (`$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md`) for the top idea.
 
 Before Phase 1, try to sync local `main` against `origin/main` first, then inspect `upstream/main`:
 
@@ -92,9 +103,9 @@ Invoke `/idea-creator` with the landscape context:
 - Deep validate top ideas (full novelty check + devil's advocate)
 - Run parallel pilot experiments on available GPUs (top 2-3 ideas)
 - Rank by empirical signal
-- Output `IDEA_REPORT.md`
+- Output `$RESEARCH_ROOT/IDEA_REPORT.md`
 
-**🚦 Checkpoint:** Present `IDEA_REPORT.md` ranked ideas to the user. Ask:
+**🚦 Checkpoint:** Present `$RESEARCH_ROOT/IDEA_REPORT.md` ranked ideas to the user. Ask:
 
 ```
 💡 Generated X ideas, filtered to Y, piloted Z. Top results:
@@ -128,7 +139,7 @@ For each top idea (positive pilot signal), run a thorough novelty check:
 - Check for concurrent work (last 3-6 months)
 - Identify closest existing work and differentiation points
 
-**Update `IDEA_REPORT.md`** with deep novelty results. Eliminate any idea that turns out to be already published.
+**Update `$RESEARCH_ROOT/IDEA_REPORT.md`** with deep novelty results. Eliminate any idea that turns out to be already published.
 
 ### Phase 4: External Critical Review
 
@@ -143,7 +154,7 @@ For the surviving top idea(s), get brutal feedback:
 - Scores the idea, identifies weaknesses, suggests minimum viable improvements
 - Provides concrete feedback on experimental design
 
-**Update `IDEA_REPORT.md`** with reviewer feedback and revised plan.
+**Update `$RESEARCH_ROOT/IDEA_REPORT.md`** with reviewer feedback and revised plan.
 
 ### Phase 4.5: Method Refinement + Experiment Planning
 
@@ -157,7 +168,7 @@ After review, refine the top idea into a concrete proposal and plan experiments:
 - Freeze a **Problem Anchor** to prevent scope drift
 - Iteratively refine the method via GPT-5.4 review (up to 5 rounds, until score ≥ 9)
 - Generate a claim-driven experiment roadmap with ablations, budgets, and run order
-- Output: `refine-logs/FINAL_PROPOSAL.md`, `refine-logs/EXPERIMENT_PLAN.md`, `refine-logs/EXPERIMENT_TRACKER.md`
+- Output: `$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`, `$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md`, `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md`
 
 **🚦 Checkpoint:** Present the refined proposal summary:
 
@@ -193,7 +204,7 @@ Then update repo-local ideation memory:
 
 ### Phase 5: Final Report
 
-Finalize `IDEA_REPORT.md` with all accumulated information:
+Finalize `$RESEARCH_ROOT/IDEA_REPORT.md` with all accumulated information:
 
 ```markdown
 # Idea Discovery Report

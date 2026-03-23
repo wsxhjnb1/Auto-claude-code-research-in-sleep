@@ -13,11 +13,22 @@ Autonomously iterate: review → implement fixes → re-review, until the extern
 
 Run this workflow from the root of a checked-out ARIS repo or fork. It depends on repo-local `tools/`, `memory/`, and `refine-logs/`.
 
+## Research Workspace
+
+Resolve the active research workspace first:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage auto-review-loop --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Later review rounds default to the active research workspace. To switch, include `research name: <human-readable-name>` inline.
+
 ## Constants
 
 - MAX_ROUNDS = 4
 - POSITIVE_THRESHOLD: score >= 6/10, or verdict contains "accept", "sufficient", "ready for submission"
-- REVIEW_DOC: `AUTO_REVIEW.md` in project root (cumulative log)
+- REVIEW_DOC: `$RESEARCH_ROOT/AUTO_REVIEW.md` (cumulative log)
 - REVIEWER_MODEL = `gpt-5.4` — Model used via a secondary Codex agent. Must be an OpenAI model (e.g., `gpt-5.4`, `o3`, `gpt-4o`)
 - **HUMAN_CHECKPOINT = false** — When `true`, pause after each round's review (Phase B) and present the score + weaknesses to the user. Wait for user input before proceeding to Phase C. The user can: approve the suggested fixes, provide custom modification instructions, skip specific fixes, or stop the loop early. When `false` (default), the loop runs fully autonomously.
 
@@ -35,7 +46,7 @@ Continue on success, "no updates", or a temporary fetch / network failure. If th
 
 ## State Persistence (Compact Recovery)
 
-Long-running loops may hit the context window limit, triggering automatic compaction. To survive this, persist state to `REVIEW_STATE.json` after each round:
+Long-running loops may hit the context window limit, triggering automatic compaction. To survive this, persist state to `$RESEARCH_ROOT/refine-logs/REVIEW_STATE.json` after each round:
 
 ```json
 {
@@ -57,13 +68,13 @@ Long-running loops may hit the context window limit, triggering automatic compac
 
 ### Initialization
 
-1. **Check for `REVIEW_STATE.json`** in project root:
+1. **Check for `$RESEARCH_ROOT/refine-logs/REVIEW_STATE.json`**:
    - If it does not exist: **fresh start** (normal case, identical to behavior before this feature existed)
    - If it exists AND `status` is `"completed"`: **fresh start** (previous loop finished normally)
    - If it exists AND `status` is `"in_progress"` AND `timestamp` is older than 24 hours: **fresh start** (stale state from a killed/abandoned run — delete the file and start over)
    - If it exists AND `status` is `"in_progress"` AND `timestamp` is within 24 hours: **resume**
      - Read the state file to recover `round`, `agent_id`, `last_score`, `pending_experiments`
-     - Read `AUTO_REVIEW.md` to restore full context of prior rounds
+     - Read `$RESEARCH_ROOT/AUTO_REVIEW.md` to restore full context of prior rounds
      - If `pending_experiments` is non-empty, check if they have completed (e.g., check screen sessions)
      - Resume from the next round (round = saved round + 1)
      - Log: "Recovered from context compaction. Resuming at Round N."
@@ -73,7 +84,7 @@ Long-running loops may hit the context window limit, triggering automatic compac
 3. Read recent experiment results (check output directories, logs)
 4. Identify current weaknesses and open TODOs from prior reviews
 5. Initialize round counter = 1 (unless recovered from state file)
-6. Create/update `AUTO_REVIEW.md` with header and timestamp
+6. Create/update `$RESEARCH_ROOT/AUTO_REVIEW.md` with header and timestamp
 
 ### Loop (repeat up to MAX_ROUNDS)
 
@@ -176,7 +187,7 @@ If experiments were launched:
 
 #### Phase E: Document Round
 
-Append to `AUTO_REVIEW.md`:
+Append to `$RESEARCH_ROOT/AUTO_REVIEW.md`:
 
 ```markdown
 ## Round N (timestamp)
@@ -206,7 +217,7 @@ This is the authoritative record. Do NOT truncate or paraphrase.]
 - [continuing to round N+1 / stopping]
 ```
 
-**Write `REVIEW_STATE.json`** with current round, agent id, score, verdict, and any pending experiments.
+**Write `$RESEARCH_ROOT/refine-logs/REVIEW_STATE.json`** with current round, agent id, score, verdict, and any pending experiments.
 
 Write a short reflection in working notes:
 
@@ -227,8 +238,8 @@ Increment round counter → back to Phase A.
 
 When loop ends (positive assessment or max rounds):
 
-1. Update `REVIEW_STATE.json` with `"status": "completed"`
-2. Write final summary to `AUTO_REVIEW.md`
+1. Update `$RESEARCH_ROOT/refine-logs/REVIEW_STATE.json` with `"status": "completed"`
+2. Write final summary to `$RESEARCH_ROOT/AUTO_REVIEW.md`
 3. Update project notes with conclusions
 4. Run one final reflection + `/research-memory "review"` update so the repo-local memory records the strongest reviewer objections, proven fixes, and experiment lessons
 5. If stopped at max rounds without positive assessment:

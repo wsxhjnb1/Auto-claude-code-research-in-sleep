@@ -33,6 +33,17 @@ The goal is not to produce flashy demos. The goal is to produce ideas that are:
 - feasible with available robotics infrastructure
 - interesting even if the answer is negative
 
+## Research Workspace
+
+Resolve the active research workspace before writing robotics idea artifacts:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage idea-discovery-robot --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Treat robotics idea reports and pilot notes as relative to `$RESEARCH_ROOT`.
+
 ## Constants
 
 - **MAX_PILOT_IDEAS = 3** — Validate at most 3 top ideas deeply
@@ -285,7 +296,7 @@ Update the report with the reviewer's minimum viable evidence package.
 
 ## Phase 6: Final Report
 
-Write or update `IDEA_REPORT.md` with a robotics-specific structure so it stays compatible with downstream workflows.
+Write or update `$RESEARCH_ROOT/IDEA_REPORT.md` with a robotics-specific structure so it stays compatible with downstream workflows.
 
 ```markdown
 # Robotics Idea Discovery Report

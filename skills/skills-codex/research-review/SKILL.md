@@ -13,6 +13,17 @@ Get a multi-round critical review of research work from an external LLM with max
 
 ## Context: $ARGUMENTS
 
+## Research Workspace
+
+Resolve the active research workspace before gathering context or writing review artifacts:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage research-review --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Save research review outputs under `$RESEARCH_ROOT/refine-logs/`.
+
 ## Prerequisites
 
 - Use `spawn_agent` and `send_input` when the user has explicitly allowed delegation or subagents.
@@ -64,7 +75,7 @@ Stop iterating when:
 - The narrative structure is settled
 
 ### Step 5: Document Everything
-Save the full interaction and conclusions to a review document in the project root:
+Save the full interaction and conclusions to `$RESEARCH_ROOT/refine-logs/RESEARCH_REVIEW.md`:
 - Round-by-round summary of criticisms and responses
 - Final consensus on claims, narrative, and experiments
 - Claims matrix (what claims are allowed under each possible outcome)
@@ -99,4 +110,3 @@ Update project memory/notes with key review conclusions.
 
 ### For mock review:
 "Please write a mock NeurIPS review with: Summary, Strengths, Weaknesses, Questions for Authors, Score, Confidence, and What Would Move Toward Accept."
-

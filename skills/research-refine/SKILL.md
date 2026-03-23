@@ -8,6 +8,17 @@ allowed-tools: Bash(*), Read, Write, Edit, Grep, Glob, WebSearch, WebFetch, Agen
 
 Refine and concretize: **$ARGUMENTS**
 
+## Research Workspace
+
+Resolve the research workspace before Phase 0:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage research-refine --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Method-refinement artifacts belong under `$RESEARCH_ROOT/refine-logs/`. Repo-level `memory/`, `vendor-skills/`, `.venv/`, and runtime/sync state remain at the repo root.
+
 ## Overview
 
 Use this skill when the research problem is already visible but the technical route is still fuzzy. The goal is not to produce a bloated proposal or a benchmark shopping list. The goal is to turn a vague direction into a **problem -> focused method -> minimal validation** document that is concrete enough to implement, elegant enough to feel paper-worthy, and current enough to resonate in the foundation-model era.
@@ -27,7 +38,7 @@ User input (PROBLEM + vague APPROACH)
   -> Phase 3 (Claude): Anchor check + simplicity check -> revise method -> rewrite full proposal
   -> Phase 4 (Codex, same thread): Re-evaluate revised proposal
   -> Repeat Phase 3-4 until OVERALL SCORE >= 9 or MAX_ROUNDS reached
-  -> Phase 5: Save full history to refine-logs/
+  -> Phase 5: Save full history to $RESEARCH_ROOT/refine-logs/
   -> Optional handoff: /experiment-plan for a detailed execution-ready experiment roadmap
 ```
 
@@ -36,7 +47,7 @@ User input (PROBLEM + vague APPROACH)
 - **REVIEWER_MODEL = `gpt-5.4`** — Reviewer model used via Codex MCP.
 - **MAX_ROUNDS = 5** — Maximum review-revise rounds.
 - **SCORE_THRESHOLD = 9** — Minimum overall score to stop.
-- **OUTPUT_DIR = `refine-logs/`** — Directory for round files and final report.
+- **OUTPUT_DIR = `$RESEARCH_ROOT/refine-logs/`** — Directory for round files and final report.
 - **MAX_LOCAL_PAPERS = 15** — Maximum local papers/notes to scan for grounding.
 - **MAX_CORE_EXPERIMENTS = 3** — Default cap for core validation blocks inside this skill.
 - **MAX_PRIMARY_CLAIMS = 2** — Soft cap for paper-level claims. Prefer one dominant claim plus one supporting claim.
@@ -47,7 +58,7 @@ User input (PROBLEM + vague APPROACH)
 ## Output Structure
 
 ```
-refine-logs/
+$RESEARCH_ROOT/refine-logs/
 ├── round-0-initial-proposal.md
 ├── round-1-review.md
 ├── round-1-refinement.md
@@ -158,7 +169,7 @@ Additional rules:
 
 #### Step 1.6: Write the Initial Proposal
 
-Save to `refine-logs/round-0-initial-proposal.md`.
+Save to `$RESEARCH_ROOT/refine-logs/round-0-initial-proposal.md`.
 
 Use this structure:
 
@@ -323,7 +334,7 @@ mcp__codex__codex:
 
 **CRITICAL: Save the FULL raw response** verbatim.
 
-Save review to `refine-logs/round-1-review.md` with the raw response in a `<details>` block.
+Save review to `$RESEARCH_ROOT/refine-logs/round-1-review.md` with the raw response in a `<details>` block.
 
 ### Phase 3: Parse Feedback and Revise the Method
 
@@ -345,7 +356,7 @@ Extract:
 - **Modernization Opportunities**
 - **Action items** ranked by priority
 
-Update `refine-logs/score-history.md`:
+Update `$RESEARCH_ROOT/refine-logs/score-history.md`:
 
 ```markdown
 # Score Evolution
@@ -388,7 +399,7 @@ Bias the revisions toward:
 
 Do **not** add multiple parallel contributions just to chase score. If the reviewer requests another module, first ask whether the same gain can come from a better interface, distillation signal, reward model, or inference policy on top of an existing backbone.
 
-Save to `refine-logs/round-N-refinement.md`:
+Save to `$RESEARCH_ROOT/refine-logs/round-N-refinement.md`:
 
 ```markdown
 # Round N Refinement
@@ -462,7 +473,7 @@ mcp__codex__codex-reply:
     Same output format: 7 scores, overall score, verdict, drift warning, simplification opportunities, modernization opportunities, remaining action items.
 ```
 
-Save review to `refine-logs/round-N-review.md`.
+Save review to `$RESEARCH_ROOT/refine-logs/round-N-review.md`.
 
 Then return to Phase 3 until:
 
@@ -471,7 +482,7 @@ Then return to Phase 3 until:
 
 ### Phase 5: Final Report and Logs
 
-#### Step 5.1: Write `refine-logs/REVIEW_SUMMARY.md`
+#### Step 5.1: Write `$RESEARCH_ROOT/refine-logs/REVIEW_SUMMARY.md`
 
 This file is the high-level round-by-round review record. It should answer: each round was trying to solve what, what changed, what got resolved, and what remained.
 
@@ -510,7 +521,7 @@ This file is the high-level round-by-round review record. It should answer: each
 - Remaining weaknesses:
 ```
 
-#### Step 5.2: Write `refine-logs/FINAL_PROPOSAL.md`
+#### Step 5.2: Write `$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`
 
 This file is the clean final version document. It should contain only the final proposal itself, without review chatter, round history, or raw reviewer output.
 
@@ -522,7 +533,7 @@ This file is the clean final version document. It should contain only the final 
 
 If the final verdict is not READY, still write the best current final version here.
 
-#### Step 5.3: Write `refine-logs/REFINEMENT_REPORT.md`
+#### Step 5.3: Write `$RESEARCH_ROOT/refine-logs/REFINEMENT_REPORT.md`
 
 ```markdown
 # Refinement Report
@@ -538,8 +549,8 @@ If the final verdict is not READY, still write the best current final version he
 [Verbatim anchor used across all rounds]
 
 ## Output Files
-- Review summary: `refine-logs/REVIEW_SUMMARY.md`
-- Final proposal: `refine-logs/FINAL_PROPOSAL.md`
+- Review summary: `$RESEARCH_ROOT/refine-logs/REVIEW_SUMMARY.md`
+- Final proposal: `$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`
 
 ## Score Evolution
 
@@ -555,7 +566,7 @@ If the final verdict is not READY, still write the best current final version he
 | 2     | ...                     | ...              | ...    |
 
 ## Final Proposal Snapshot
-- Canonical clean version lives in `refine-logs/FINAL_PROPOSAL.md`
+- Canonical clean version lives in `$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md`
 - Summarize the final thesis in 3-5 bullets here
 
 ## Method Evolution Highlights
@@ -615,9 +626,9 @@ Key method upgrades:
 Remaining concerns:
 - [if any]
 
-Review summary: refine-logs/REVIEW_SUMMARY.md
-Full report: refine-logs/REFINEMENT_REPORT.md
-Final proposal: refine-logs/FINAL_PROPOSAL.md
+Review summary: $RESEARCH_ROOT/refine-logs/REVIEW_SUMMARY.md
+Full report: $RESEARCH_ROOT/refine-logs/REFINEMENT_REPORT.md
+Final proposal: $RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md
 Suggested next step: /experiment-plan
 ```
 

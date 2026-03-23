@@ -174,7 +174,7 @@ Read skills/auto-review-loop-llm/SKILL.md and run it for "你的论文主题".
 ```text
 Read skills/idea-discovery/SKILL.md and run it for "你的研究方向".
 Read skills/auto-review-loop/SKILL.md and run it for "你的论文主题".
-Read skills/paper-writing/SKILL.md and use NARRATIVE_REPORT.md as input.
+Read skills/paper-writing/SKILL.md and use `research/<slug>/NARRATIVE_REPORT.md` as input.
 Read skills/research-pipeline/SKILL.md and run the full pipeline for "你的研究方向".
 ```
 

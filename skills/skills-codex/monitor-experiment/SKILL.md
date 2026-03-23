@@ -7,6 +7,20 @@ description: "Monitor running experiments, check progress, collect results. Use 
 
 Monitor: $ARGUMENTS
 
+## Research Workspace
+
+Resolve the active research workspace before collecting artifacts:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage monitor-experiment --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Treat runtime artifacts and run outputs as relative to `$RESEARCH_ROOT`, especially:
+
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`
+- `$RESEARCH_ROOT/results/<run_name>/RUN_STATE.json`
+
 ## Workflow
 
 ### Step 1: Check What's Running
@@ -34,7 +48,7 @@ ssh <server> "cat <results_dir>/<latest>.json"
 
 ### Step 3.2: Inspect Runtime Artifact and Resume State
 
-Read `refine-logs/EXPERIMENT_RUNTIME.json` when it exists. For each active or recent run, extract:
+Read `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json` when it exists. For each active or recent run, extract:
 - `status`
 - `resume_capable`
 - `resume_policy`

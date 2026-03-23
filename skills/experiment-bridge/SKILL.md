@@ -17,15 +17,31 @@ Run this workflow from the root of a checked-out ARIS repo or fork. It depends o
 
 When Claude Code is started from the ARIS repo root, the project-level wrapper at `.claude/skills/experiment-bridge/SKILL.md` exposes `/experiment-bridge`. The canonical implementation remains this file.
 
+## Research Workspace
+
+Resolve the active research workspace before Phase 1:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage experiment-bridge --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Behavior:
+
+- If an active research workspace already exists, `/experiment-bridge` reuses it.
+- To switch workspaces explicitly, include `research name: <human-readable-name>` inline.
+- If no active workspace exists, start from `/research-pipeline` or `/idea-discovery`, or pass an explicit `research name:` override.
+- Research artifacts live under `$RESEARCH_ROOT`; repo-level `memory/`, `vendor-skills/`, `.venv/`, `.claude/`, and runtime/sync state stay at the repo root.
+
 ## Overview
 
 This skill bridges Workflow 1 (idea discovery + method refinement) and Workflow 2 (auto review loop). It takes the experiment plan and turns it into running experiments with initial results.
 
 ```
-Workflow 1 output:                    This skill:                                                         Workflow 2 input:
-refine-logs/EXPERIMENT_PLAN.md   →   implement → debate → sanity/runtime review → deploy → collect   →   initial results ready
-refine-logs/EXPERIMENT_TRACKER.md     code        (cross-model)      (/run-experiment)                    for /auto-review-loop
-refine-logs/FINAL_PROPOSAL.md
+Workflow 1 output:                                 This skill:                                                         Workflow 2 input:
+$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md  →   implement → debate → sanity/runtime review → deploy → collect   →   initial results ready
+$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md   code        (cross-model)      (/run-experiment)                    for /auto-review-loop
+$RESEARCH_ROOT/refine-logs/FINAL_PROPOSAL.md
 ```
 
 The debate loop is default-enabled in v1. It is framework-agnostic at the core, but it may recommend faster frameworks, runtimes, or kernel work when runtime evidence clearly justifies it.
@@ -69,7 +85,7 @@ This skill expects one or more of:
 5. **`memory/experiment-memory.md`** (optional, recommended) — reusable lessons about bad experiment patterns, proven strategies, resume pitfalls, and metrics lessons
 6. **`vendor-skills/INSTALLED_SKILLS.json`** (optional) — repo-local third-party skills staged for this repo
 
-If none exist, ask the user what experiments to implement.
+Treat those paths as relative to `$RESEARCH_ROOT` unless the user explicitly provides an absolute path or a `research/...` path. If none exist, ask the user what experiments to implement.
 
 Before Phase 1, try:
 
@@ -82,7 +98,7 @@ The sync flow is origin-first: reconcile local `main` with `origin/main` first, 
 
 ## State Persistence (Compact Recovery)
 
-Long-running debate loops may hit context limits or pause while experiments run. Persist state to `refine-logs/EXPERIMENT_DEBATE_STATE.json` after each review round and after each runtime-review checkpoint:
+Long-running debate loops may hit context limits or pause while experiments run. Persist state to `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_STATE.json` after each review round and after each runtime-review checkpoint:
 
 ```json
 {
@@ -105,12 +121,12 @@ Long-running debate loops may hit context limits or pause while experiments run.
 
 ## Outputs
 
-- `refine-logs/EXPERIMENT_DEBATE_LOG.md` — round-by-round findings with `ACCEPTED`, `DEFERRED`, or `REJECTED` decisions and one-line rationales
-- `refine-logs/EXPERIMENT_DEBATE_STATE.json` — compact recovery state
-- `refine-logs/EXPERIMENT_RUNTIME.json` — parseable runtime evidence from sanity and deployed runs
-- `results/*/RUN_STATE.json` — per-run progress + latest-checkpoint state for long resumable runs
-- `refine-logs/EXPERIMENT_TRACKER.md` — run-by-run execution table with status notes
-- `refine-logs/EXPERIMENT_RESULTS.md` — initial results summary
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_LOG.md` — round-by-round findings with `ACCEPTED`, `DEFERRED`, or `REJECTED` decisions and one-line rationales
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_STATE.json` — compact recovery state
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json` — parseable runtime evidence from sanity and deployed runs
+- `$RESEARCH_ROOT/results/*/RUN_STATE.json` — per-run progress + latest-checkpoint state for long resumable runs
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md` — run-by-run execution table with status notes
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RESULTS.md` — initial results summary
 
 ## Workflow
 
@@ -255,7 +271,7 @@ mcp__codex__codex:
 
 1. Run one reviewer pass.
 2. Implement fixes or rebut them with evidence.
-3. Record each reviewer suggestion in `refine-logs/EXPERIMENT_DEBATE_LOG.md` with:
+3. Record each reviewer suggestion in `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_LOG.md` with:
    - `ACCEPTED` — implemented now
    - `DEFERRED` — reasonable but postponed
    - `REJECTED` — not valid for this workload / semantics, with evidence
@@ -298,7 +314,7 @@ mcp__codex__codex-reply:
 
 #### Decision Logging
 
-Record every finding in `refine-logs/EXPERIMENT_DEBATE_LOG.md`:
+Record every finding in `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_LOG.md`:
 
 ```markdown
 | Finding ID | Pass | Severity | Disposition | Rationale |
@@ -316,12 +332,12 @@ Before deploying the full experiment suite, run the sanity-stage experiment:
 /run-experiment [sanity experiment command]
 ```
 
-The sanity run must refresh `refine-logs/EXPERIMENT_RUNTIME.json`.
+The sanity run must refresh `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`.
 
 Verify:
 - the training loop runs without errors
 - metrics are computed and saved correctly
-- `EXPERIMENT_RUNTIME.json` contains command, environment, exit code, wall time, GPU memory, throughput if available, failure signatures, and long-run resume metadata when applicable
+- `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json` contains command, environment, exit code, wall time, GPU memory, throughput if available, failure signatures, and long-run resume metadata when applicable
 - the runtime evidence does not show blocker-level anomalies
 
 For any sanity-stage run that is long or multi-step, do a resume smoke test before full deployment:
@@ -336,7 +352,7 @@ If sanity fails or evidence is malformed → go to Phase 3.5. Do not proceed to 
 
 **Skip this phase if `RUNTIME_REVIEW = false`.**
 
-Re-enter review after sanity or deployment if `EXPERIMENT_RUNTIME.json` shows any of:
+Re-enter review after sanity or deployment if `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json` shows any of:
 - non-zero exit code
 - `CUDA out of memory`, OOM killer, or repeated allocator failures
 - `nan`, `inf`, or divergence-like numerical signatures
@@ -349,7 +365,7 @@ If the runtime review indicates the experimental design itself is flawed, re-rea
 Use the existing reviewer thread when available; otherwise start a new one. Provide:
 - the relevant experiment-plan block
 - the method description
-- the latest `EXPERIMENT_RUNTIME.json`
+- the latest `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`
 - the most relevant log excerpt
 - what was already accepted / deferred / rejected in the debate log
 
@@ -369,7 +385,7 @@ For each runtime finding, require:
 
 After runtime review:
 1. implement accepted blocker fixes
-2. update `EXPERIMENT_DEBATE_LOG.md`
+2. update `$RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_LOG.md`
 3. rerun sanity
 4. continue only when blocker-level runtime issues are cleared
 
@@ -384,7 +400,7 @@ Deploy experiments following the plan's milestone order:
 For each milestone:
 1. deploy experiments in parallel (up to `MAX_PARALLEL_RUNS`)
 2. use `/monitor-experiment` to track progress
-3. parse result files plus `refine-logs/EXPERIMENT_RUNTIME.json`
+3. parse result files plus `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`
 4. if any run hits a blocker-level runtime issue, pause that milestone and re-enter Phase 3.5 before continuing
 5. if a run only surfaces optimization opportunities, log them as `DEFERRED` unless they are required to make the experiment feasible
 
@@ -410,19 +426,19 @@ Deploy now? Or review the debate log first?
 As experiments complete:
 
 1. **Parse output files** (JSON/CSV/logs) for key metrics
-2. **Parse `refine-logs/EXPERIMENT_RUNTIME.json`** for wall time, exit code, GPU memory, throughput, and failure signatures
+2. **Parse `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`** for wall time, exit code, GPU memory, throughput, and failure signatures
 3. **Training quality check** — if W&B data is available (CLAUDE.md has `wandb: true` and `wandb_project`), invoke `/training-check` to detect NaN, loss divergence, plateaus, or overfitting. If W&B is not configured, skip silently.
-4. **Update `refine-logs/EXPERIMENT_TRACKER.md`** — fill in Status and Notes columns
-5. **Check success criteria** from `EXPERIMENT_PLAN.md` — did each experiment meet its bar?
+4. **Update `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md`** — fill in Status and Notes columns
+5. **Check success criteria** from `$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md` — did each experiment meet its bar?
 6. **Write initial results summary**:
 
 ```markdown
 # Initial Experiment Results
 
 **Date**: [today]
-**Plan**: refine-logs/EXPERIMENT_PLAN.md
-**Debate log**: refine-logs/EXPERIMENT_DEBATE_LOG.md
-**Runtime evidence**: refine-logs/EXPERIMENT_RUNTIME.json
+**Plan**: $RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md
+**Debate log**: $RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_LOG.md
+**Runtime evidence**: $RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json
 
 ## Results by Milestone
 
@@ -457,7 +473,7 @@ After main experiments (M2) complete with positive results, invoke `/ablation-pl
 
 - Read the main results and method description
 - Generate a claim-driven ablation plan: which components to remove, what to compare, expected outcomes
-- Append ablation blocks to `refine-logs/EXPERIMENT_PLAN.md` and `refine-logs/EXPERIMENT_TRACKER.md`
+- Append ablation blocks to `$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md` and `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md`
 - If main results are negative or inconclusive, skip ablation planning and note in the summary
 
 If `/ablation-planner` is not available, skip silently — the existing EXPERIMENT_PLAN.md ablation blocks (if any) remain unchanged.
@@ -489,10 +505,10 @@ Experiment bridge complete:
 - Completed: [X/Y] must-run, [A/B] nice-to-have
 - Main result: [one sentence]
 
-Debate log: refine-logs/EXPERIMENT_DEBATE_LOG.md
-Runtime evidence: refine-logs/EXPERIMENT_RUNTIME.json
-Results: refine-logs/EXPERIMENT_RESULTS.md
-Tracker: refine-logs/EXPERIMENT_TRACKER.md
+Debate log: $RESEARCH_ROOT/refine-logs/EXPERIMENT_DEBATE_LOG.md
+Runtime evidence: $RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json
+Results: $RESEARCH_ROOT/refine-logs/EXPERIMENT_RESULTS.md
+Tracker: $RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md
 
 Ready for Workflow 2:
 -> /auto-review-loop "[topic]"
@@ -515,8 +531,8 @@ Ready for Workflow 2:
 - **Large file handling**: If the Write tool fails due to file size, immediately retry using Bash (`cat << 'EOF' > file`) to write in chunks. Do NOT ask the user for permission — just do it silently.
 - **CRITICAL — Evaluation must use dataset ground truth.** When writing evaluation scripts, ALWAYS compare model predictions against the dataset's actual ground truth labels / targets — NEVER use another model's output as ground truth.
 - **CRITICAL — Long runs must be resumable.** Any multi-step or 10+ minute run must checkpoint periodically and auto-resume from the latest valid checkpoint.
-- **Follow the plan.** Do not invent experiments not in `EXPERIMENT_PLAN.md`. If you think something is missing, note it but do not add it silently.
-- **Sanity first.** Never deploy a full suite without verifying the sanity stage passes and `EXPERIMENT_RUNTIME.json` is usable.
+- **Follow the plan.** Do not invent experiments not in `$RESEARCH_ROOT/refine-logs/EXPERIMENT_PLAN.md`. If you think something is missing, note it but do not add it silently.
+- **Sanity first.** Never deploy a full suite without verifying the sanity stage passes and `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json` is usable.
 - **Keep the fork on `main`.** Migrate old `update`-branch layouts with `tools/aris_upstream_sync.py migrate-to-main`, then keep future origin-first sync on `main`.
 - **Reuse existing code.** Extend, do not duplicate.
 - **Save everything as JSON/CSV.** The downstream loops need parseable results, not just terminal output.
@@ -526,7 +542,7 @@ Ready for Workflow 2:
 - **Read `memory/experiment-memory.md` before redesigning experiments or repeating a runtime fix.**
 - **Treat repo-local vendor skills as workspace-only.** Keep them inside `vendor-skills/` for this repo; do not publish or copy them into external global skill directories.
 - **Reflection + memory update is part of the Workflow 1.5 contract** after major result snapshots, runtime anomalies, or design pivots.
-- **Update the tracker.** `EXPERIMENT_TRACKER.md` should reflect real status after each run completes.
+- **Update the tracker.** `$RESEARCH_ROOT/refine-logs/EXPERIMENT_TRACKER.md` should reflect real status after each run completes.
 - **Budget awareness.** Track GPU-hours against the plan's budget and warn when approaching the limit.
 
 ## Composing with Other Skills

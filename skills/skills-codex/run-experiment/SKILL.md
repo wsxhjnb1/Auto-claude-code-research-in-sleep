@@ -9,12 +9,27 @@ Deploy and run ML experiment: $ARGUMENTS
 
 This skill is the execution side of Workflow 1.5. In v1 it must do two things:
 - launch the experiment correctly
-- write parseable runtime evidence to `refine-logs/EXPERIMENT_RUNTIME.json`
+- write parseable runtime evidence to `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`
 
 It now also owns the **long-run resume contract**:
 - any run that is multi-step or likely to exceed roughly 10 minutes is a **long run**
 - long runs must be checkpointed and resumable
 - the next launch must auto-resume from the latest valid checkpoint without a manually edited command
+
+## Research Workspace
+
+Resolve the active research workspace before launch:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage run-experiment --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+All experiment artifacts belong under that workspace:
+
+- runtime artifact: `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`
+- run outputs: `$RESEARCH_ROOT/results/<run_name>/`
+- per-run state: `$RESEARCH_ROOT/results/<run_name>/RUN_STATE.json`
 
 ## Workflow
 
@@ -121,12 +136,12 @@ Before deploying, ensure the experiment scripts have W&B logging:
 
 ### Step 4: Prepare Runtime Evidence Capture
 
-Before launch, create or refresh `refine-logs/EXPERIMENT_RUNTIME.json`.
+Before launch, create or refresh `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json`.
 
 For newly written experiment code, prefer this default layout:
 
 ```text
-results/<run_name>/
+$RESEARCH_ROOT/results/<run_name>/
 ├── checkpoints/
 ├── RUN_STATE.json
 ├── metrics.json
@@ -212,7 +227,7 @@ ssh <server> "screen -dmS <exp_name> bash -c '\
   /usr/bin/time -f \"WALL=%e\" sh -c \"CUDA_VISIBLE_DEVICES=<gpu_id> python <script> <args> 2>&1 | tee <log_file>\"; \
   EXIT_CODE=\$?; \
   END_TS=\$(date -Iseconds); \
-  # update refine-logs/EXPERIMENT_RUNTIME.json with exit code, wall time, failure signatures, latest checkpoint, and progress marker \
+  # update $RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json with exit code, wall time, failure signatures, latest checkpoint, and progress marker \
   exit \$EXIT_CODE'"
 ```
 
@@ -226,7 +241,7 @@ For local long-running jobs, use `run_in_background: true` to keep the conversat
 
 ### Step 7: Parse Runtime Evidence
 
-After launch (and again after completion for background jobs), update `refine-logs/EXPERIMENT_RUNTIME.json` with:
+After launch (and again after completion for background jobs), update `$RESEARCH_ROOT/refine-logs/EXPERIMENT_RUNTIME.json` with:
 - `status`
 - `resume_capable`
 - `resume_policy`

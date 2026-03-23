@@ -7,6 +7,17 @@ description: "Draft LaTeX paper section by section from an outline. Use when use
 
 Draft a LaTeX paper based on: **$ARGUMENTS**
 
+## Research Workspace
+
+Resolve the active research workspace before drafting:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage paper-write --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Treat `PAPER_PLAN.md`, `NARRATIVE_REPORT.md`, `figures/`, and `paper/` as relative to `$RESEARCH_ROOT` unless the user explicitly supplies an absolute path or a `research/...` path.
+
 ## Constants
 
 - **REVIEWER_MODEL = `gpt-5.4`** — Model used via a secondary Codex agent for section review. Must be an OpenAI model.
@@ -53,10 +64,10 @@ The skill includes conference templates in `templates/`. Select based on TARGET_
 
 ### Project Structure
 
-Generate this file structure:
+Generate this file structure under `$RESEARCH_ROOT`:
 
 ```
-paper/
+$RESEARCH_ROOT/paper/
 ├── main.tex                    # master file (includes sections)
 ├── iclr2026_conference.sty     # or neurips_2025.sty / icml2025.sty
 ├── math_commands.tex           # shared math macros
@@ -84,13 +95,13 @@ Bootstrap the write-time runtime first:
 python3 tools/ensure_paper_runtime.py --phase write
 ```
 
-If `paper/` already exists, back up to `paper-backup-{timestamp}/` before overwriting. Never silently destroy existing work.
+If `$RESEARCH_ROOT/paper/` already exists, back up to `$RESEARCH_ROOT/paper-backup-{timestamp}/` before overwriting. Never silently destroy existing work.
 
 **CRITICAL: Clean stale files.** When changing section structure (e.g., 5 sections → 7 sections), delete section files that are no longer referenced by `main.tex`. Stale files (e.g., old `5_conclusion.tex` left behind when conclusion moved to `7_conclusion.tex`) cause confusion and waste space.
 
 ### Step 1: Initialize Project
 
-1. Create `paper/` directory
+1. Create `$RESEARCH_ROOT/paper/` directory
 2. Copy venue template from `templates/` — the template already includes:
    - All standard packages (amsmath, hyperref, cleveref, booktabs, etc.)
    - Theorem environments with `\crefname{assumption}` fix

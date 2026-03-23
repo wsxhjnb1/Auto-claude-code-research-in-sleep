@@ -7,6 +7,17 @@ description: "Generate a structured paper outline from review conclusions and ex
 
 Generate a structured, section-by-section paper outline from: **$ARGUMENTS**
 
+## Research Workspace
+
+Resolve the active research workspace before reading inputs or writing the outline:
+
+```bash
+RESEARCH_ROOT="$(python3 tools/aris_research_workspace.py ensure --stage paper-plan --arguments "$ARGUMENTS" --print-path)"
+echo "Using research workspace: $RESEARCH_ROOT"
+```
+
+Treat narrative files, review artifacts, figures, and the generated paper plan as relative to `$RESEARCH_ROOT` unless the user explicitly supplies an absolute path or a `research/...` path.
+
 ## Constants
 
 - **REVIEWER_MODEL = `gpt-5.4`** — Model used via a secondary Codex agent for outline review. Must be an OpenAI model.
@@ -15,7 +26,7 @@ Generate a structured, section-by-section paper outline from: **$ARGUMENTS**
 
 ## Inputs
 
-The skill expects one or more of these in the project directory:
+The skill expects one or more of these in the active research workspace:
 
 1. **NARRATIVE_REPORT.md** or **STORY.md** — research narrative with claims and evidence
 2. **AUTO_REVIEW.md** — canonical auto-review loop conclusions
@@ -204,7 +215,7 @@ Apply feedback before finalizing.
 
 ### Step 7: Output
 
-Save the final outline to `PAPER_PLAN.md` in the project root:
+Save the final outline to `$RESEARCH_ROOT/PAPER_PLAN.md`:
 
 ```markdown
 # Paper Plan
